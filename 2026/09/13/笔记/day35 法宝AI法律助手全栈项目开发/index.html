@@ -1,0 +1,969 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 8.1.2">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/favicon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon.png">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/all.min.css">
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"www.blog-x.cc.cd","root":"/","scheme":"Gemini","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"always","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":false,"show_result":false,"style":null},"back2top":{"enable":true,"sidebar":true,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":false,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}}};
+  </script>
+
+  <meta name="description" content="法宝AI法律助手全栈项目开发一、项目概述法宝是一个AI法律助手全栈项目，提供三大核心功能：AI法律咨询、法律文书生成、合同风险审查。    层 技术栈 端口    前端 Vue 3 + Vite + Vue Router 4 + Element Plus + axios 5173（dev）   后端 FastAPI + SQLAlchemy 2.0 + Pydantic V2 + JWT + py">
+<meta property="og:type" content="article">
+<meta property="og:title" content="法宝AI法律助手全栈项目开发">
+<meta property="og:url" content="https://www.blog-x.cc.cd/2026/09/13/%E7%AC%94%E8%AE%B0/day35%20%E6%B3%95%E5%AE%9DAI%E6%B3%95%E5%BE%8B%E5%8A%A9%E6%89%8B%E5%85%A8%E6%A0%88%E9%A1%B9%E7%9B%AE%E5%BC%80%E5%8F%91/index.html">
+<meta property="og:site_name" content="我的学习日记">
+<meta property="og:description" content="法宝AI法律助手全栈项目开发一、项目概述法宝是一个AI法律助手全栈项目，提供三大核心功能：AI法律咨询、法律文书生成、合同风险审查。    层 技术栈 端口    前端 Vue 3 + Vite + Vue Router 4 + Element Plus + axios 5173（dev）   后端 FastAPI + SQLAlchemy 2.0 + Pydantic V2 + JWT + py">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2026-09-13T05:30:00.000Z">
+<meta property="article:modified_time" content="2026-09-14T02:19:30.358Z">
+<meta property="article:author" content="ZHX">
+<meta name="twitter:card" content="summary">
+
+<link rel="canonical" href="https://www.blog-x.cc.cd/2026/09/13/%E7%AC%94%E8%AE%B0/day35%20%E6%B3%95%E5%AE%9DAI%E6%B3%95%E5%BE%8B%E5%8A%A9%E6%89%8B%E5%85%A8%E6%A0%88%E9%A1%B9%E7%9B%AE%E5%BC%80%E5%8F%91/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'zh-CN'
+  };
+</script>
+
+  <title>法宝AI法律助手全栈项目开发 | 我的学习日记</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">我的学习日记</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="main-menu menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档<span class="badge">46</span></a>
+
+  </li>
+        <li class="menu-item menu-item-categories">
+
+    <a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分类<span class="badge">10</span></a>
+
+  </li>
+        <li class="menu-item menu-item-about">
+
+    <a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>关于</a>
+
+  </li>
+        <li class="menu-item menu-item-tags">
+
+    <a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签<span class="badge">0</span></a>
+
+  </li>
+  </ul>
+</nav>
+
+
+
+
+</div>
+    </header>
+
+    
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://www.blog-x.cc.cd/2026/09/13/%E7%AC%94%E8%AE%B0/day35%20%E6%B3%95%E5%AE%9DAI%E6%B3%95%E5%BE%8B%E5%8A%A9%E6%89%8B%E5%85%A8%E6%A0%88%E9%A1%B9%E7%9B%AE%E5%BC%80%E5%8F%91/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.jpeg">
+      <meta itemprop="name" content="ZHX">
+      <meta itemprop="description" content="记录编程学习、项目实战和踩坑笔记">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="我的学习日记">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          法宝AI法律助手全栈项目开发
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2026-09-13 13:30:00" itemprop="dateCreated datePublished" datetime="2026-09-13T13:30:00+08:00">2026-09-13</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="far fa-calendar-check"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2026-09-14 10:19:30" itemprop="dateModified" datetime="2026-09-14T10:19:30+08:00">2026-09-14</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E7%AC%94%E8%AE%B0/" itemprop="url" rel="index"><span itemprop="name">笔记</span></a>
+                </span>
+                  ，
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E7%AC%94%E8%AE%B0/%E5%B0%8F%E9%A1%B9%E7%9B%AE/" itemprop="url" rel="index"><span itemprop="name">小项目</span></a>
+                </span>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+      <div class="post-body" itemprop="articleBody">
+
+        
+          <h1 id="法宝AI法律助手全栈项目开发"><a href="#法宝AI法律助手全栈项目开发" class="headerlink" title="法宝AI法律助手全栈项目开发"></a>法宝AI法律助手全栈项目开发</h1><h2 id="一、项目概述"><a href="#一、项目概述" class="headerlink" title="一、项目概述"></a>一、项目概述</h2><p><strong>法宝</strong>是一个AI法律助手全栈项目，提供三大核心功能：AI法律咨询、法律文书生成、合同风险审查。</p>
+<table>
+<thead>
+<tr>
+<th>层</th>
+<th>技术栈</th>
+<th>端口</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>前端</td>
+<td>Vue 3 + Vite + Vue Router 4 + Element Plus + axios</td>
+<td>5173（dev）</td>
+</tr>
+<tr>
+<td>后端</td>
+<td>FastAPI + SQLAlchemy 2.0 + Pydantic V2 + JWT + python-docx</td>
+<td>8000</td>
+</tr>
+<tr>
+<td>AI引擎</td>
+<td>FastGPT（本地部署，3个应用：法律咨询&#x2F;文书起草&#x2F;合同审查）</td>
+<td>3000</td>
+</tr>
+<tr>
+<td>数据库</td>
+<td>MySQL 8.0（utf8mb4，5张表）</td>
+<td>3306</td>
+</tr>
+</tbody></table>
+<p>设计语言：深蓝 <code>#1a3a5c</code> + 金色 <code>#c9a96e</code>，专业法律感。</p>
+<h2 id="二、前端开发"><a href="#二、前端开发" class="headerlink" title="二、前端开发"></a>二、前端开发</h2><h3 id="2-1-项目结构与路由"><a href="#2-1-项目结构与路由" class="headerlink" title="2.1 项目结构与路由"></a>2.1 项目结构与路由</h3><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">src/</span><br><span class="line">├── api/              # 后端接口封装（auth/chat/document/contract）</span><br><span class="line">├── composables/      # 认证状态管理（useAuth）</span><br><span class="line">├── utils/http.js     # axios实例（自动token、统一解包、blob短路）</span><br><span class="line">├── views/            # 四个页面</span><br><span class="line">│   ├── HomePage.vue       # 首页（Hero + 三模块卡片）</span><br><span class="line">│   ├── AiConsult.vue      # AI法律咨询（对话 + 历史侧栏）</span><br><span class="line">│   ├── DocGenerate.vue    # 文书生成（三步流程 + 历史卡片）</span><br><span class="line">│   └── ContractReview.vue # 合同审查（上传→审查→报告 + 历史卡片）</span><br><span class="line">├── components/       # AppHeader（导航+登录弹窗）/ AppFooter / FeatureCard</span><br><span class="line">└── router/index.js   # 懒加载 + 页面标题守卫</span><br></pre></td></tr></table></figure>
+
+<p>路由：<code>/</code> 首页、<code>/ai-consult</code> 咨询、<code>/doc-generate</code> 文书、<code>/contract-review</code> 审查、<code>/about</code> 关于。</p>
+<h3 id="2-2-AI法律咨询页"><a href="#2-2-AI法律咨询页" class="headerlink" title="2.2 AI法律咨询页"></a>2.2 AI法律咨询页</h3><p>核心交互流程：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">用户输入 → POST /chat/conversations/&#123;id&#125;/messages</span><br><span class="line">    → 后端存用户消息 → 组装历史上下文(最近10条)</span><br><span class="line">    → 调FastGPT → 存AI回复 → 返回两条消息</span><br><span class="line">    → 前端逐字渲染到气泡</span><br></pre></td></tr></table></figure>
+
+<p>关键实现：</p>
+<ul>
+<li><strong>SSE流式解析</strong>：<code>fetch</code> + <code>reader.read()</code> 逐行解析 <code>data: {...}</code>，处理 <code>reasoning_content</code>（思维链实时展示）和 <code>content</code>（正文逐字流入）</li>
+<li><strong>思维链面板</strong>：模型思考时推理过程逐字流式显示，标题实时计时 <code>⏳ 深度思考中 · N 秒</code>，正文开始后自动折叠为 <code>已深度思考 · 用时 N 秒</code></li>
+<li><strong>历史会话侧栏</strong>：登录后左侧240px面板，<code>onMounted</code> 加载 <code>getConversations</code>，点击切换回填 <code>getMessages</code>，hover 显示删除按钮（<code>ElMessageBox.confirm</code>），”新对话”按钮只重置聊天区不删数据</li>
+<li><strong>登录状态监听</strong>：<code>watch(isLoggedIn)</code> —— 登录→重新加载列表，登出→清空+重置聊天区</li>
+</ul>
+<h3 id="2-3-文书生成页"><a href="#2-3-文书生成页" class="headerlink" title="2.3 文书生成页"></a>2.3 文书生成页</h3><p>三步流程（<code>el-steps</code>）：<strong>选择类型 → 填写信息 → 生成预览</strong></p>
+<p>4种文书：民事起诉状、民事答辩状、律师函、授权委托书。</p>
+<p>关键改进：</p>
+<ul>
+<li><strong>百分比进度条 → 阶段骨架提示</strong>：4阶段清单（理解信息→检索法规→构建框架→生成全文），每2-2.5秒推进一项，后端返回立即跳结果页</li>
+<li><strong>预览排版</strong>：服务端返回结构化JSON（<code>{title, sections}</code>），前端按section type渲染：<code>heading</code>加粗、<code>paragraph</code>首行缩进、<code>party</code>角色标签+详情、<code>signature</code>右对齐、<code>notice</code>斜体灰色</li>
+<li><strong>下载</strong>：<code>POST /documents/download</code>，传 <code>{doc_data: JSON字符串, doc_type}</code>，后端用专业排版生成docx返回blob</li>
+<li><strong>历史卡片</strong>：第一步下方”我的文书历史”，查看（解析JSON进预览页）&#x2F; 下载（直接用记录内容生成docx）</li>
+</ul>
+<h3 id="2-4-合同审查页"><a href="#2-4-合同审查页" class="headerlink" title="2.4 合同审查页"></a>2.4 合同审查页</h3><p>流程：<strong>上传合同 → 阶段分析 → 风险报告</strong></p>
+<p>关键实现：</p>
+<ul>
+<li><strong>上传</strong>：<code>POST /contracts/upload</code>，支持 .docx&#x2F;.pdf&#x2F;.txt&#x2F;.doc&#x2F;.wps，后端提取文本存 <code>original_text</code> 字段</li>
+<li><strong>5阶段骨架</strong>：解析文本→识别条款→比对法规→评估等级→生成报告</li>
+<li><strong>报告展示</strong>：评分圆环 + 高&#x2F;中&#x2F;低风险统计 + 风险条款卡片（原文摘录→风险分析→绿色修改建议→法律依据）+ 合规条款</li>
+<li><strong>下载</strong>：审查报告docx（<code>GET /contracts/report/{id}</code>）+ 原始合同文件（<code>GET /contracts/file/{id}</code>）</li>
+<li><strong>历史卡片</strong>：每条记录显示文件名 + 评分tag（85+绿&#x2F;70+黄&#x2F;低分红）+ 时间，查看&#x2F;下载报告&#x2F;下载原文件</li>
+</ul>
+<h3 id="2-5-页面动态展示机制（Vue-Router驱动）"><a href="#2-5-页面动态展示机制（Vue-Router驱动）" class="headerlink" title="2.5 页面动态展示机制（Vue Router驱动）"></a>2.5 页面动态展示机制（Vue Router驱动）</h3><p><strong>核心问题</strong>：App.vue怎么做到”动态展示其他页面”？</p>
+<p>本项目<strong>不用</strong><code>数组 + activeIndex + 动态组件</code>的手动写法，而是用<strong>Vue Router</strong>驱动：</p>
+<h4 id="页面切换的6步链路"><a href="#页面切换的6步链路" class="headerlink" title="页面切换的6步链路"></a>页面切换的6步链路</h4><table>
+<thead>
+<tr>
+<th>步骤</th>
+<th>发生什么</th>
+<th>在哪个文件</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>1</td>
+<td>点击导航或按钮</td>
+<td>AppHeader.vue（router-link）&#x2F; HomePage.vue（router.push）</td>
+</tr>
+<tr>
+<td>2</td>
+<td>地址栏URL变化</td>
+<td>浏览器</td>
+</tr>
+<tr>
+<td>3</td>
+<td>路由表匹配：path→component</td>
+<td>router&#x2F;index.js</td>
+</tr>
+<tr>
+<td>4</td>
+<td>懒加载：首次访问才下载页面组件</td>
+<td>router&#x2F;index.js 的 <code>() =&gt; import(...)</code></td>
+</tr>
+<tr>
+<td>5</td>
+<td>router-view拿到匹配的组件对象</td>
+<td>App.vue 的 v-slot</td>
+</tr>
+<tr>
+<td>6</td>
+<td>transition + <code>&lt;component :is&gt;</code> 渲染新页面</td>
+<td>App.vue</td>
+</tr>
+</tbody></table>
+<h4 id="App-vue核心渲染结构"><a href="#App-vue核心渲染结构" class="headerlink" title="App.vue核心渲染结构"></a>App.vue核心渲染结构</h4><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">&lt;router-view v-slot=&quot;&#123; Component &#125;&quot;&gt;</span><br><span class="line">  &lt;transition name=&quot;fade&quot; mode=&quot;out-in&quot;&gt;</span><br><span class="line">    &lt;component :is=&quot;Component&quot; /&gt;</span><br><span class="line">  &lt;/transition&gt;</span><br><span class="line">&lt;/router-view&gt;</span><br></pre></td></tr></table></figure>
+
+<p>逐层拆解：</p>
+<table>
+<thead>
+<tr>
+<th>代码</th>
+<th>作用</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>&lt;router-view&gt;</code></td>
+<td>路由出口，自动拿到”当前URL匹配的组件”</td>
+</tr>
+<tr>
+<td><code>v-slot=&quot;{ Component }&quot;</code></td>
+<td>作用域插槽，把匹配到的组件对象解构出来</td>
+</tr>
+<tr>
+<td><code>&lt;transition mode=&quot;out-in&quot;&gt;</code></td>
+<td>切换动画：旧组件完全消失后新组件再进来</td>
+</tr>
+<tr>
+<td><code>&lt;component :is=&quot;Component&quot; /&gt;</code></td>
+<td>动态组件，<code>:is</code>是哪个组件对象就渲染哪个</td>
+</tr>
+</tbody></table>
+<blockquote>
+<p>一句话：<strong>router-view负责”算出现在该显示谁”，component :is负责”把它画出来”。</strong></p>
+</blockquote>
+<h4 id="URL切换底层机制"><a href="#URL切换底层机制" class="headerlink" title="URL切换底层机制"></a>URL切换底层机制</h4><p><code>&lt;router-link&gt;</code>渲染成<code>&lt;a href&gt;</code>，但点击时<strong>不是浏览器默认跳转</strong>，而是Vue Router接管：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">点击 &lt;a href=&quot;/ai-consult&quot;&gt;</span><br><span class="line">  ├─ 浏览器默认行为：整页跳转（已被 e.preventDefault() 阻止）</span><br><span class="line">  └─ Vue Router 接管后的5步：</span><br><span class="line">      ① e.preventDefault()</span><br><span class="line">      ② 内部调用 router.push(&#x27;/ai-consult&#x27;)</span><br><span class="line">      ③ history.pushState(...)         地址栏变（不发请求！）</span><br><span class="line">      ④ currentRoute.value = 新路由对象  更新响应式状态</span><br><span class="line">      ⑤ router-view 依赖 currentRoute   重新渲染 → 换组件</span><br></pre></td></tr></table></figure>
+
+<p>关键：<strong><code>pushState</code>只改地址栏、不发网络请求</strong>——这是SPA”切换页面但浏览器不刷新”的全部秘密。</p>
+<h4 id="currentRoute：URL与页面之间的桥"><a href="#currentRoute：URL与页面之间的桥" class="headerlink" title="currentRoute：URL与页面之间的桥"></a>currentRoute：URL与页面之间的桥</h4><p>Vue Router内部有一个<code>currentRoute</code>响应式对象，<code>&lt;router-view&gt;</code>依赖它：</p>
+<blockquote>
+<p>URL变了 → <code>currentRoute.value</code>更新 → 依赖它的计算属性失效 → <code>router-view</code>重渲染 → <code>&lt;component :is&gt;</code>实例化新组件</p>
+</blockquote>
+<p>三条路径殊途同归：</p>
+<table>
+<thead>
+<tr>
+<th>路径</th>
+<th>URL是谁改的</th>
+<th>结果</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>点router-link &#x2F; router.push()</td>
+<td>Vue Router用pushState主动改</td>
+<td>地址栏变 + 组件切换，无刷新</td>
+</tr>
+<tr>
+<td>浏览器前进&#x2F;后退</td>
+<td>浏览器改（触发popstate事件）</td>
+<td>Router监听后更新currentRoute → 组件切换</td>
+</tr>
+<tr>
+<td>地址栏手输&#x2F;F5刷新</td>
+<td>浏览器整页加载</td>
+<td>应用重启 → 路由读URL匹配渲染</td>
+</tr>
+</tbody></table>
+<h4 id="状态驱动-vs-URL驱动"><a href="#状态驱动-vs-URL驱动" class="headerlink" title="状态驱动 vs URL驱动"></a>状态驱动 vs URL驱动</h4><table>
+<thead>
+<tr>
+<th>维度</th>
+<th>手动写法（状态驱动）</th>
+<th>本项目（URL驱动）</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>切换”开关”</td>
+<td>内存里activeIndex数字</td>
+<td>地址栏URL字符串</td>
+</tr>
+<tr>
+<td>浏览器前进&#x2F;后退</td>
+<td>不支持</td>
+<td>原生支持</td>
+</tr>
+<tr>
+<td>刷新页面</td>
+<td>回到主页</td>
+<td>停留在当前URL对应页面</td>
+</tr>
+<tr>
+<td>组件加载</td>
+<td>启动时全部import</td>
+<td>路由懒加载，用到才下载</td>
+</tr>
+<tr>
+<td>扩展性</td>
+<td>加页面改多处</td>
+<td>加路由+组件即可，App.vue不动</td>
+</tr>
+</tbody></table>
+<h3 id="2-6-认证与状态管理"><a href="#2-6-认证与状态管理" class="headerlink" title="2.6 认证与状态管理"></a>2.6 认证与状态管理</h3><figure class="highlight javascript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// useAuth.js — 全局单例</span></span><br><span class="line"><span class="keyword">const</span> user = <span class="title function_">ref</span>(<span class="title class_">JSON</span>.<span class="title function_">parse</span>(<span class="variable language_">localStorage</span>.<span class="title function_">getItem</span>(<span class="string">&#x27;fabao_user&#x27;</span>) || <span class="string">&#x27;null&#x27;</span>))</span><br><span class="line"><span class="keyword">const</span> isLoggedIn = <span class="title function_">computed</span>(<span class="function">() =&gt;</span> !!user.<span class="property">value</span>)</span><br></pre></td></tr></table></figure>
+
+<ul>
+<li><code>AppHeader.vue</code> 右侧：未登录显示”登录&#x2F;注册”按钮，登录后显示用户名+”退出”</li>
+<li><code>http.js</code> 请求拦截器：从localStorage取token加 <code>Authorization: Bearer</code> 头</li>
+<li><code>http.js</code> 响应拦截器：blob类型直接返回，JSON自动解包 <code>{code, message, data}</code></li>
+</ul>
+<h2 id="三、后端开发"><a href="#三、后端开发" class="headerlink" title="三、后端开发"></a>三、后端开发</h2><h3 id="3-1-分层架构"><a href="#3-1-分层架构" class="headerlink" title="3.1 分层架构"></a>3.1 分层架构</h3><figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">api/        路由层（接收请求、校验参数、调用service、返回响应）</span><br><span class="line">services/   业务逻辑层（AI调用、文书模板、合同审查、docx生成）</span><br><span class="line">models/     ORM层（5张表，SQLAlchemy 2.0 Mapped写法）</span><br><span class="line">schemas/    校验层（Pydantic V2 请求/响应模型）</span><br><span class="line">core/       安全层（JWT签发验证、密码哈希、依赖注入）</span><br><span class="line">utils/      工具层（docx/pdf/txt文本提取、统一响应封装）</span><br></pre></td></tr></table></figure>
+
+<h3 id="3-2-数据库设计"><a href="#3-2-数据库设计" class="headerlink" title="3.2 数据库设计"></a>3.2 数据库设计</h3><table>
+<thead>
+<tr>
+<th>表</th>
+<th>用途</th>
+<th>关键字段</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>users</code></td>
+<td>用户注册</td>
+<td>id, username, email, hashed_password</td>
+</tr>
+<tr>
+<td><code>conversations</code></td>
+<td>AI对话</td>
+<td>id, user_id(FK), title, updated_at</td>
+</tr>
+<tr>
+<td><code>messages</code></td>
+<td>对话消息</td>
+<td>id, conversation_id(FK), role, content</td>
+</tr>
+<tr>
+<td><code>documents</code></td>
+<td>文书记录</td>
+<td>id, user_id(FK), doc_type, form_data(JSON), generated_content(Text)</td>
+</tr>
+<tr>
+<td><code>contracts</code></td>
+<td>合同审查</td>
+<td>id, user_id(FK), file_name, file_path, original_text, review_result(JSON)</td>
+</tr>
+</tbody></table>
+<p>统一响应格式：<code>{code: 200, message: &quot;success&quot;, data: {...}}</code></p>
+<h3 id="3-3-FastGPT集成与chatId隔离"><a href="#3-3-FastGPT集成与chatId隔离" class="headerlink" title="3.3 FastGPT集成与chatId隔离"></a>3.3 FastGPT集成与chatId隔离</h3><p><strong>核心调用</strong>：三个service统一调用 FastGPT 的 <code>/v1/chat/completions</code> 接口（OpenAI兼容格式），<code>appId</code> 放请求体内。</p>
+<p><strong>chatId命名规则</strong>（修复跨用户&#x2F;跨对话记忆串台）：</p>
+<table>
+<thead>
+<tr>
+<th>模块</th>
+<th>chatId格式</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>AI对话</td>
+<td><code>fabao-chat-u{uid}-c{conversation_id}</code></td>
+<td>每个对话独立记忆</td>
+</tr>
+<tr>
+<td>文书生成</td>
+<td><code>fabao-doc-u{uid}-d{document_id}</code></td>
+<td>每次生成独立，不累积历史</td>
+</tr>
+<tr>
+<td>合同审查</td>
+<td><code>fabao-review-u{uid}-r{contract_id}</code></td>
+<td>同一合同重新审查共用历史</td>
+</tr>
+</tbody></table>
+<p>前缀 <code>chat</code>&#x2F;<code>doc</code>&#x2F;<code>review</code> 解决三表主键可能撞号的问题。</p>
+<p><strong>文书生成特殊处理</strong>：原来先调FastGPT再存记录（调用时没有主键），改为”先建空记录拿主键→调FastGPT→回填content”。</p>
+<h3 id="3-4-文书docx排版"><a href="#3-4-文书docx排版" class="headerlink" title="3.4 文书docx排版"></a>3.4 文书docx排版</h3><p>从简陋逐行写入改为专业排版服务 <code>document_docx_service.py</code>：</p>
+<p><strong>字体策略</strong>（关键：必须同时设置ascii+eastAsia）：</p>
+<ul>
+<li>ascii：<code>Times New Roman</code></li>
+<li>eastAsia：<code>Microsoft YaHei</code>（否则Word打开中文变方块）</li>
+<li>全文纯黑 <code>RGBColor(0,0,0)</code></li>
+</ul>
+<p><strong>结构化JSON → Word排版映射</strong>：</p>
+<table>
+<thead>
+<tr>
+<th>section type</th>
+<th>含义</th>
+<th>Word样式</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>party</code></td>
+<td>当事人信息</td>
+<td>role加粗 + content正常，首行缩进24pt</td>
+</tr>
+<tr>
+<td><code>heading</code></td>
+<td>节标题</td>
+<td>15pt加粗，段前14pt段后8pt</td>
+</tr>
+<tr>
+<td><code>numbered</code></td>
+<td>编号项</td>
+<td>number加粗 + content正常，首行缩进</td>
+</tr>
+<tr>
+<td><code>paragraph</code></td>
+<td>正文段落</td>
+<td>12pt，首行缩进2字符，1.6倍行距</td>
+</tr>
+<tr>
+<td><code>center</code></td>
+<td>居中行</td>
+<td>居中对齐，bold可选</td>
+</tr>
+<tr>
+<td><code>signature</code></td>
+<td>落款</td>
+<td>右对齐</td>
+</tr>
+<tr>
+<td><code>blank</code></td>
+<td>空行</td>
+<td>spacing个空行</td>
+</tr>
+<tr>
+<td><code>notice</code></td>
+<td>提示</td>
+<td>11pt斜体</td>
+</tr>
+</tbody></table>
+<p>占位符长度按数据类型区分：人名6、身份证18、电话11、日期8、金额10、地址20、法院律所16个下划线。</p>
+<h3 id="3-5-合同审查报告docx"><a href="#3-5-合同审查报告docx" class="headerlink" title="3.5 合同审查报告docx"></a>3.5 合同审查报告docx</h3><p><code>report_service.py</code> 生成Word报告：标题→评分→结论→每条风险（原文&#x2F;分析&#x2F;建议&#x2F;法律依据）→免责声明。</p>
+<p>中文文件名处理：<code>Content-Disposition</code> 使用RFC 5987双filename格式，<code>Access-Control-Expose-Headers: Content-Disposition</code> 让前端能读到。</p>
+<h2 id="四、FastGPT调用链路"><a href="#四、FastGPT调用链路" class="headerlink" title="四、FastGPT调用链路"></a>四、FastGPT调用链路</h2><h3 id="4-1-AI对话完整链路"><a href="#4-1-AI对话完整链路" class="headerlink" title="4.1 AI对话完整链路"></a>4.1 AI对话完整链路</h3><figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line">前端 AiConsult.vue  sendMessage()</span><br><span class="line">  │  POST /api/v1/chat/conversations/&#123;id&#125;/messages</span><br><span class="line">  ▼</span><br><span class="line">后端 chat.py  send_message()</span><br><span class="line">  │  1. 存用户消息到 messages 表</span><br><span class="line">  │  2. 查该 conversation 最近 10 条（MAX_HISTORY=10）</span><br><span class="line">  │  3. 拼 chatId = fabao-chat-u&#123;uid&#125;-c&#123;conv_id&#125;</span><br><span class="line">  │  4. 调 ai_service.generate_reply(history, content, chat_id)</span><br><span class="line">  ▼</span><br><span class="line">ai_service.py</span><br><span class="line">  │  payload = &#123;chatId, stream:false, messages:[历史+本次], appId&#125;</span><br><span class="line">  │  POST http://localhost:3000/api/v1/chat/completions</span><br><span class="line">  ▼</span><br><span class="line">FastGPT</span><br><span class="line">  ├─ 按 chatId 找/建 chat 记录 → 自动取该 chatId 的历史</span><br><span class="line">  ├─ 与传入 messages 合并 → 交给模型</span><br><span class="line">  └─ 本轮问答写回该 chat → 返回 AI 回复</span><br></pre></td></tr></table></figure>
+
+<h3 id="4-2-chatId的记忆语义"><a href="#4-2-chatId的记忆语义" class="headerlink" title="4.2 chatId的记忆语义"></a>4.2 chatId的记忆语义</h3><ul>
+<li><strong>传了chatId</strong>：FastGPT自动从数据库取该会话历史 + 新消息一起喂模型 + 本轮落库</li>
+<li><strong>不传chatId</strong>：无记忆、不存储（适合一次性任务）</li>
+<li><strong>同一chatId重新审查</strong>：FastGPT带上上次历史（合同审查场景下合理关联）</li>
+</ul>
+<h2 id="五、部署与联调"><a href="#五、部署与联调" class="headerlink" title="五、部署与联调"></a>五、部署与联调</h2><h3 id="5-1-前后端两个”服务”的本质区别"><a href="#5-1-前后端两个”服务”的本质区别" class="headerlink" title="5.1 前后端两个”服务”的本质区别"></a>5.1 前后端两个”服务”的本质区别</h3><table>
+<thead>
+<tr>
+<th></th>
+<th>前端</th>
+<th>后端</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>技术</td>
+<td>Vue 3 + Vite + Element Plus</td>
+<td>FastAPI + MySQL</td>
+</tr>
+<tr>
+<td>本质</td>
+<td><strong>一堆静态文件</strong>（HTML+JS+CSS）</td>
+<td>一个<strong>持续运行的程序</strong>，监听端口等请求</td>
+</tr>
+<tr>
+<td>部署要求</td>
+<td>任何能放静态文件的地方（CF Pages、Nginx、OSS）</td>
+<td>必须有一台<strong>一直开着机</strong>的服务器跑它</td>
+</tr>
+</tbody></table>
+<blockquote>
+<p><code>npm run build</code>后前端就是<code>dist/</code>目录里的一堆文件，没有”进程”概念。能”调接口”纯粹是因为浏览器执行了其中的JS代码发起HTTP请求。”前端部署在哪”和”后端部署在哪”完全独立，中间只靠一个URL连接。</p>
+</blockquote>
+<h3 id="5-2-请求从哪发出：http-js统一封装"><a href="#5-2-请求从哪发出：http-js统一封装" class="headerlink" title="5.2 请求从哪发出：http.js统一封装"></a>5.2 请求从哪发出：http.js统一封装</h3><figure class="highlight js"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// src/utils/http.js</span></span><br><span class="line"><span class="keyword">const</span> baseURL = <span class="keyword">import</span>.<span class="property">meta</span>.<span class="property">env</span>.<span class="property">VITE_API_BASE_URL</span></span><br><span class="line">  ? <span class="string">`<span class="subst">$&#123;<span class="keyword">import</span>.meta.env.VITE_API_BASE_URL&#125;</span>/api/v1`</span></span><br><span class="line">  : <span class="string">&#x27;/api/v1&#x27;</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">const</span> http = axios.<span class="title function_">create</span>(&#123; baseURL, <span class="attr">timeout</span>: <span class="number">120000</span> &#125;)</span><br></pre></td></tr></table></figure>
+
+<ul>
+<li><strong>没设置<code>VITE_API_BASE_URL</code></strong>（本地dev）→ <code>baseURL = &#39;/api/v1&#39;</code>，相对路径，请求发给当前页面所在服务器</li>
+<li><strong>设置了</strong>（CF Pages）→ <code>baseURL = &#39;https://954487onpr52.vicp.fun/api/v1&#39;</code>，绝对地址，直接打到花生壳</li>
+</ul>
+<blockquote>
+<p><strong><code>import.meta.env</code>是编译时替换</strong>，不是运行时读取！Vite打包时直接把代码替换成字符串常量写死进JS。<strong>改环境变量后必须重新部署（重新build）才生效</strong>。</p>
+</blockquote>
+<h3 id="5-3-本地开发：Vite代理消跨域"><a href="#5-3-本地开发：Vite代理消跨域" class="headerlink" title="5.3 本地开发：Vite代理消跨域"></a>5.3 本地开发：Vite代理消跨域</h3><figure class="highlight js"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// vite.config.js</span></span><br><span class="line"><span class="attr">server</span>: &#123;</span><br><span class="line">  <span class="attr">port</span>: <span class="number">5173</span>,</span><br><span class="line">  <span class="attr">proxy</span>: &#123; <span class="string">&#x27;/api&#x27;</span>: &#123; <span class="attr">target</span>: <span class="string">&#x27;http://localhost:8000&#x27;</span>, <span class="attr">changeOrigin</span>: <span class="literal">true</span> &#125; &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>工作流程：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">浏览器 localhost:5173</span><br><span class="line">  │  请求 /api/v1/auth/login（相对路径）</span><br><span class="line">  ▼</span><br><span class="line">Vite 开发服务器 (5173)</span><br><span class="line">  │  检测到 /api 开头 → 悄悄转发给 8000</span><br><span class="line">  ▼</span><br><span class="line">FastAPI 后端 (8000)</span><br></pre></td></tr></table></figure>
+
+<p><strong>为什么没有跨域？</strong> 页面来自5173，请求也发给5173 → 同源 → 浏览器不干涉。Vite转给8000是服务器间通信，浏览器不知道。</p>
+<blockquote>
+<p>⚠️ <code>npm run dev</code>有代理 ✅；<code>npm run preview</code>预览build产物<strong>不带proxy</strong>（那是另一套preview.proxy配置，本项目没配）。所以本地build完preview会连不上后端——<strong>proxy不进打包产物</strong>。</p>
+</blockquote>
+<h3 id="5-4-线上部署架构"><a href="#5-4-线上部署架构" class="headerlink" title="5.4 线上部署架构"></a>5.4 线上部署架构</h3><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">浏览器                              公网                         家里</span><br><span class="line">┌───────────────────┐  ①加载页面   ┌──────────────┐            ┌──────────────┐</span><br><span class="line">│ fabao.blog-x.cc.cd│ ◀────────▶ │ Cloudflare   │ 静态文件    │  你的电脑     │</span><br><span class="line">│                   │             │ Pages CDN    │            │              │</span><br><span class="line">│                   │  ②请求API   └──────────────┘            │ ②&#x27;花生壳客户端│</span><br><span class="line">│                   │ ──────────▶ 954487onpr52.vicp.fun        │      ↓       │</span><br><span class="line">└───────────────────┘  (跨域!)                                 │ FastAPI:8000 │</span><br><span class="line">                                                            └──────────────┘</span><br></pre></td></tr></table></figure>
+
+<ul>
+<li>前端：CF Pages，自定义域名 <code>https://fabao.blog-x.cc.cd</code></li>
+<li>后端：花生壳内网穿透 <code>https://954487onpr52.vicp.fun</code></li>
+<li>前端生产构建：<code>VITE_API_BASE_URL</code> 环境变量拼完整后端地址（Vite proxy仅dev生效）</li>
+</ul>
+<h3 id="5-5-CF-Pages-405错误：静态托管不认识POST"><a href="#5-5-CF-Pages-405错误：静态托管不认识POST" class="headerlink" title="5.5 CF Pages 405错误：静态托管不认识POST"></a>5.5 CF Pages 405错误：静态托管不认识POST</h3><p>当前端没配<code>VITE_API_BASE_URL</code>时，<code>baseURL</code>是相对路径<code>/api/v1</code>，浏览器把请求发给<strong>CF Pages自己</strong>。CF Pages是静态文件托管，只会”找文件、发文件”，对<code>/api/v1/auth/login</code>这个路径发POST → <strong>405 Method Not Allowed</strong>。</p>
+<p>解法：CF Pages项目设置里加构建环境变量 <code>VITE_API_BASE_URL = https://954487onpr52.vicp.fun</code>，打包出的JS里baseURL变完整地址，请求直接发给花生壳。</p>
+<p>格式三要求：<code>https://</code>开头、<strong>不带</strong><code>/api/v1</code>（代码会自己拼）、<strong>末尾不带</strong><code>/</code>。</p>
+<h3 id="5-6-花生壳：让家里电脑”被公网访问”"><a href="#5-6-花生壳：让家里电脑”被公网访问”" class="headerlink" title="5.6 花生壳：让家里电脑”被公网访问”"></a>5.6 花生壳：让家里电脑”被公网访问”</h3><p>后端跑在家里<code>127.0.0.1:8000</code>，家里宽带通常没有公网IP。花生壳（内网穿透）解决：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">公网用户 ──▶ 954487onpr52.vicp.fun（花生壳云端）</span><br><span class="line">                    │  云端沿&quot;隧道&quot;下发</span><br><span class="line">                    ▼</span><br><span class="line">             家里电脑花生壳客户端（主动和云端保持长连接）</span><br><span class="line">                    │  转发到本机</span><br><span class="line">                    ▼</span><br><span class="line">             127.0.0.1:8000（FastAPI后端）</span><br></pre></td></tr></table></figure>
+
+<ul>
+<li>隧道是客户端<strong>主动向外建立</strong>的长连接，不需要公网IP、不需要端口映射</li>
+<li>前提：电脑开机 + 后端运行 + 花生壳客户端在线，三者缺一线上就挂</li>
+<li>免费版限制：带宽小、域名随机、有流量限额——演示够用，生产不行</li>
+</ul>
+<h3 id="5-7-CORS跨域：线上真正的”元凶”"><a href="#5-7-CORS跨域：线上真正的”元凶”" class="headerlink" title="5.7 CORS跨域：线上真正的”元凶”"></a>5.7 CORS跨域：线上真正的”元凶”</h3><h4 id="同源策略"><a href="#同源策略" class="headerlink" title="同源策略"></a>同源策略</h4><p>浏览器同源策略：<strong>协议 + 域名 + 端口</strong>三者完全一致才算同源。</p>
+<table>
+<thead>
+<tr>
+<th>页面地址</th>
+<th>请求地址</th>
+<th>是否跨域</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>http://localhost:5173</code></td>
+<td><code>http://localhost:5173/api/...</code></td>
+<td>否（走代理时）</td>
+</tr>
+<tr>
+<td><code>https://fabao.blog-x.cc.cd</code></td>
+<td><code>https://954487onpr52.vicp.fun/api/...</code></td>
+<td><strong>是</strong>（域名不同）</td>
+</tr>
+</tbody></table>
+<h4 id="跨域被拦的真实机制"><a href="#跨域被拦的真实机制" class="headerlink" title="跨域被拦的真实机制"></a>跨域被拦的真实机制</h4><p>跨域<strong>不是”请求发不出去”</strong>：</p>
+<ol>
+<li>登录请求带<code>Content-Type: application/json</code>，属于<strong>非简单请求</strong></li>
+<li>浏览器先偷偷发<strong>OPTIONS预检请求</strong>（preflight），问后端：”我这个来源、方法和头，你允许吗？”</li>
+<li>后端响应头必须带<code>Access-Control-Allow-Origin: https://fabao.blog-x.cc.cd</code>才算”批准”</li>
+<li>预检通过 → 浏览器才发真正的POST；不通过 → <strong>浏览器直接拦截</strong>，JS只收到无响应的错误</li>
+</ol>
+<blockquote>
+<p>为什么本地开发从没遇到CORS？因为本地走Vite代理，请求对浏览器是同源，<strong>CORS机制根本没被触发</strong>。这是”本地没问题、一上线就出事”的根本原因。</p>
+</blockquote>
+<h4 id="后端CORS白名单"><a href="#后端CORS白名单" class="headerlink" title="后端CORS白名单"></a>后端CORS白名单</h4><figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># backend/app/main.py</span></span><br><span class="line">app.add_middleware(CORSMiddleware, allow_origins=settings.CORS_ORIGINS, ...)</span><br></pre></td></tr></table></figure>
+
+<p><code>backend/.env</code>：<code>CORS_ORIGINS=[&quot;http://localhost:5173&quot;,&quot;http://localhost:5174&quot;,&quot;https://fabao.blog-x.cc.cd&quot;]</code></p>
+<p>修改后<strong>必须重启后端</strong>（<code>--reload</code>只监听.py文件，不监听.env）。</p>
+<p>排查技巧：curl没有同源策略，可直接验证：</p>
+<figure class="highlight powershell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">curl.exe <span class="literal">-s</span> <span class="literal">-i</span> <span class="literal">-X</span> OPTIONS <span class="string">&quot;https://954487onpr52.vicp.fun/api/v1/auth/login&quot;</span> <span class="literal">-H</span> <span class="string">&quot;Origin: https://fabao.blog-x.cc.cd&quot;</span> <span class="literal">-H</span> <span class="string">&quot;Access-Control-Request-Method: POST&quot;</span></span><br><span class="line"><span class="comment"># 返回200 + access-control-allow-origin头 = 放行；返回400 = 白名单没配对</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="5-8-多实例”假重启”坑"><a href="#5-8-多实例”假重启”坑" class="headerlink" title="5.8 多实例”假重启”坑"></a>5.8 多实例”假重启”坑</h3><p>改了.env也”重启”了，线上依然报跨域。原因：电脑上残留6个python进程（两组后端实例，uvicorn –reload启动&#x3D;父进程+工作进程），占8000端口的实例仍用<strong>旧配置</strong>。</p>
+<p>为什么会残留：Windows上点X关窗口或Ctrl+C偶尔杀不干净，进程变后台孤儿继续跑。</p>
+<p>加固措施：</p>
+<ol>
+<li><code>app/config.py</code>：读.env从相对路径改成<strong>绝对路径</strong>（避免从非backend目录启动读不到.env）</li>
+<li><code>app/main.py</code>：启动日志打印<code>CORS 允许来源：[...]</code>——一眼看出配置有没有生效</li>
+</ol>
+<h3 id="5-9-配置速查表"><a href="#5-9-配置速查表" class="headerlink" title="5.9 配置速查表"></a>5.9 配置速查表</h3><table>
+<thead>
+<tr>
+<th>需求</th>
+<th>改哪里</th>
+<th>改完必须做什么</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>后端换端口（本地）</td>
+<td><code>vite.config.js</code>的<code>proxy.target</code></td>
+<td>重启<code>npm run dev</code></td>
+</tr>
+<tr>
+<td>前端请求的后端地址（线上）</td>
+<td>CF Pages环境变量<code>VITE_API_BASE_URL</code></td>
+<td><strong>重新部署</strong>（重新构建才生效）</td>
+</tr>
+<tr>
+<td>允许某域名跨域</td>
+<td><code>backend/.env</code>的<code>CORS_ORIGINS</code></td>
+<td><strong>重启后端</strong>（–reload不监听.env）</td>
+</tr>
+<tr>
+<td>改后端代码</td>
+<td><code>backend/app/</code>下任意.py</td>
+<td>不用管，–reload自动重启</td>
+</tr>
+<tr>
+<td>清残留进程</td>
+<td><code>Get-Process python | Stop-Process -Force</code></td>
+<td>再启动后端</td>
+</tr>
+</tbody></table>
+<h3 id="5-10-排错思路（前端连不上后端）"><a href="#5-10-排错思路（前端连不上后端）" class="headerlink" title="5.10 排错思路（前端连不上后端）"></a>5.10 排错思路（前端连不上后端）</h3><ol>
+<li><strong>请求打到哪了？</strong> → F12 Network看失败请求的URL → CF Pages自己域名说明<code>VITE_API_BASE_URL</code>没配&#x2F;没重新部署</li>
+<li><strong>服务通不通？</strong> → 浏览器开<code>https://后端地址/docs</code>或curl → 打不开&#x3D;花生壳&#x2F;后端没在跑</li>
+<li><strong>是不是跨域被拦？</strong> → F12 Console看<code>blocked by CORS policy</code>，用OPTIONS curl验证</li>
+<li><strong>配置真的生效了吗？</strong> → 看后端启动日志<code>CORS 允许来源：[...]</code>，还是旧值&#x3D;有残留实例</li>
+</ol>
+<h2 id="六、问题与解决"><a href="#六、问题与解决" class="headerlink" title="六、问题与解决"></a>六、问题与解决</h2><h3 id="问题1：FastGPT-chatId硬编码导致跨用户记忆串台"><a href="#问题1：FastGPT-chatId硬编码导致跨用户记忆串台" class="headerlink" title="问题1：FastGPT chatId硬编码导致跨用户记忆串台"></a>问题1：FastGPT chatId硬编码导致跨用户记忆串台</h3><ul>
+<li><strong>现象</strong>：zhang聊过”张三欠5000”，新对话和lisi账号都能”记得”并复述</li>
+<li><strong>原因</strong>：<code>ai_service.py</code> 的 <code>chatId: &quot;fabao-backend&quot;</code> 是写死常量，所有用户共用一条FastGPT会话</li>
+<li><strong>解决</strong>：chatId改为 <code>fabao-chat-u{user_id}-c{conversation_id}</code>，三模块统一前缀+用户+主键</li>
+</ul>
+<h3 id="问题2：文书下载丢失AI生成内容"><a href="#问题2：文书下载丢失AI生成内容" class="headerlink" title="问题2：文书下载丢失AI生成内容"></a>问题2：文书下载丢失AI生成内容</h3><ul>
+<li><strong>现象</strong>：下载的docx变成前端输入的表单值模板拼接</li>
+<li><strong>原因</strong>：第一轮改造把 <code>DownloadRequest</code> 改成只收 <code>form_data</code>，AI内容被丢弃</li>
+<li><strong>解决</strong>：保留AI内容走智能排版（<code>format_ai_content_docx</code>），<code>form_data</code> 仅作降级</li>
+</ul>
+<h3 id="问题3：python-docx中文变方块"><a href="#问题3：python-docx中文变方块" class="headerlink" title="问题3：python-docx中文变方块"></a>问题3：python-docx中文变方块</h3><ul>
+<li><strong>原因</strong>：只设了ascii字体族，未设eastAsia</li>
+<li><strong>解决</strong>：每个run同时设置 <code>font.name = &quot;Times New Roman&quot;</code> + <code>font._element.rPr.rFonts.set(qn(&#39;w:eastAsia&#39;), &#39;Microsoft YaHei&#39;)</code></li>
+</ul>
+<h3 id="问题4：历史列表登录后显示”无历史”"><a href="#问题4：历史列表登录后显示”无历史”" class="headerlink" title="问题4：历史列表登录后显示”无历史”"></a>问题4：历史列表登录后显示”无历史”</h3><ul>
+<li><strong>原因</strong>：<code>onMounted</code> 时未登录→<code>loadSessions</code> 直接return；登录后无重新触发</li>
+<li><strong>解决</strong>：<code>watch(isLoggedIn)</code>，登录→重新加载，登出→清空列表</li>
+</ul>
+<h3 id="问题5：CORS-400-Disallowed-CORS-origin"><a href="#问题5：CORS-400-Disallowed-CORS-origin" class="headerlink" title="问题5：CORS 400 Disallowed CORS origin"></a>问题5：CORS 400 Disallowed CORS origin</h3><ul>
+<li><strong>原因</strong>：改.env后有6个残留python进程，占用8000的实例仍是旧配置</li>
+<li><strong>解决</strong>：杀干净全部残留进程 + <code>.env</code> 补线上域名 + 单实例重启</li>
+</ul>
+<h2 id="七、未解决的问题"><a href="#七、未解决的问题" class="headerlink" title="七、未解决的问题"></a>七、未解决的问题</h2><ol>
+<li><strong>FastGPT旧记录</strong>：硬编码chatId产生的旧记录（含zhang隐私内容）需手动在FastGPT后台删除</li>
+<li><strong>对话删除不同步FastGPT</strong>：前端删对话只删MySQL，FastGPT侧chat记录残留（chatId唯一化后不再读写，无害但不干净）</li>
+<li><strong>合同审查记忆策略</strong>：同一合同重新审查共用chatId带历史，如需每次无记忆需加时间戳</li>
+<li><strong>FastGPT使用者识别</strong>：后台”使用者”列全显示Owner（API Key属主），OpenAPI方式无法区分真实用户</li>
+</ol>
+<h2 id="今日总结"><a href="#今日总结" class="headerlink" title="今日总结"></a>今日总结</h2><table>
+<thead>
+<tr>
+<th>模块</th>
+<th>核心要点</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>前端框架</td>
+<td>Vue3+Vite+Element Plus，4页面+历史UI，SSE流式解析+思维链面板</td>
+</tr>
+<tr>
+<td>页面动态展示</td>
+<td>Vue Router驱动：router-view算组件、component :is渲染、pushState无刷新切换、懒加载、URL驱动vs状态驱动</td>
+</tr>
+<tr>
+<td>后端架构</td>
+<td>FastAPI四层分层，5张MySQL表，JWT认证，依赖注入</td>
+</tr>
+<tr>
+<td>FastGPT集成</td>
+<td>3个应用，chatId按”模块+用户+主键”隔离，appId放请求体</td>
+</tr>
+<tr>
+<td>文书生成</td>
+<td>结构化JSON→确定性Word排版，8种section type，中文字体双族设置</td>
+</tr>
+<tr>
+<td>合同审查</td>
+<td>FastGPT返回JSON→前端渲染+Word报告下载，RFC 5987中文文件名</td>
+</tr>
+<tr>
+<td>前后端联调</td>
+<td>Vite代理消跨域、CF Pages+花生壳架构、CORS预检机制、import.meta.env编译时替换、405&#x2F;400排错四步法</td>
+</tr>
+<tr>
+<td>关键修复</td>
+<td>chatId串台、双气泡、CORS残留进程、历史列表watch、文书下载丢AI内容</td>
+</tr>
+</tbody></table>
+
+      </div>
+
+    
+    
+    
+
+      <footer class="post-footer">
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/2026/09/10/%E5%A4%8D%E7%9B%98/day34%20%E5%85%A8%E5%B1%80%E5%94%AF%E4%B8%80ID%E4%B8%8E%E4%BC%98%E6%83%A0%E5%88%B8%E7%A7%92%E6%9D%80/" rel="prev" title="day34 全局唯一ID与优惠券秒杀">
+      <i class="fa fa-chevron-left"></i> day34 全局唯一ID与优惠券秒杀
+    </a></div>
+      <div class="post-nav-item">
+    <a href="/2026/09/13/%E5%A4%8D%E7%9B%98/day35%20%E6%B3%95%E5%AE%9DAI%E6%B3%95%E5%BE%8B%E5%8A%A9%E6%89%8B%E5%85%A8%E6%A0%88%E9%A1%B9%E7%9B%AE%E5%BC%80%E5%8F%91/" rel="next" title="法宝AI法律助手全栈项目开发">
+      法宝AI法律助手全栈项目开发 <i class="fa fa-chevron-right"></i>
+    </a></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+
+
+          </div>
+          
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#%E6%B3%95%E5%AE%9DAI%E6%B3%95%E5%BE%8B%E5%8A%A9%E6%89%8B%E5%85%A8%E6%A0%88%E9%A1%B9%E7%9B%AE%E5%BC%80%E5%8F%91"><span class="nav-number">1.</span> <span class="nav-text">法宝AI法律助手全栈项目开发</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%80%E3%80%81%E9%A1%B9%E7%9B%AE%E6%A6%82%E8%BF%B0"><span class="nav-number">1.1.</span> <span class="nav-text">一、项目概述</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BA%8C%E3%80%81%E5%89%8D%E7%AB%AF%E5%BC%80%E5%8F%91"><span class="nav-number">1.2.</span> <span class="nav-text">二、前端开发</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#2-1-%E9%A1%B9%E7%9B%AE%E7%BB%93%E6%9E%84%E4%B8%8E%E8%B7%AF%E7%94%B1"><span class="nav-number">1.2.1.</span> <span class="nav-text">2.1 项目结构与路由</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2-2-AI%E6%B3%95%E5%BE%8B%E5%92%A8%E8%AF%A2%E9%A1%B5"><span class="nav-number">1.2.2.</span> <span class="nav-text">2.2 AI法律咨询页</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2-3-%E6%96%87%E4%B9%A6%E7%94%9F%E6%88%90%E9%A1%B5"><span class="nav-number">1.2.3.</span> <span class="nav-text">2.3 文书生成页</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2-4-%E5%90%88%E5%90%8C%E5%AE%A1%E6%9F%A5%E9%A1%B5"><span class="nav-number">1.2.4.</span> <span class="nav-text">2.4 合同审查页</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2-5-%E9%A1%B5%E9%9D%A2%E5%8A%A8%E6%80%81%E5%B1%95%E7%A4%BA%E6%9C%BA%E5%88%B6%EF%BC%88Vue-Router%E9%A9%B1%E5%8A%A8%EF%BC%89"><span class="nav-number">1.2.5.</span> <span class="nav-text">2.5 页面动态展示机制（Vue Router驱动）</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#%E9%A1%B5%E9%9D%A2%E5%88%87%E6%8D%A2%E7%9A%846%E6%AD%A5%E9%93%BE%E8%B7%AF"><span class="nav-number">1.2.5.1.</span> <span class="nav-text">页面切换的6步链路</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#App-vue%E6%A0%B8%E5%BF%83%E6%B8%B2%E6%9F%93%E7%BB%93%E6%9E%84"><span class="nav-number">1.2.5.2.</span> <span class="nav-text">App.vue核心渲染结构</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#URL%E5%88%87%E6%8D%A2%E5%BA%95%E5%B1%82%E6%9C%BA%E5%88%B6"><span class="nav-number">1.2.5.3.</span> <span class="nav-text">URL切换底层机制</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#currentRoute%EF%BC%9AURL%E4%B8%8E%E9%A1%B5%E9%9D%A2%E4%B9%8B%E9%97%B4%E7%9A%84%E6%A1%A5"><span class="nav-number">1.2.5.4.</span> <span class="nav-text">currentRoute：URL与页面之间的桥</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E7%8A%B6%E6%80%81%E9%A9%B1%E5%8A%A8-vs-URL%E9%A9%B1%E5%8A%A8"><span class="nav-number">1.2.5.5.</span> <span class="nav-text">状态驱动 vs URL驱动</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2-6-%E8%AE%A4%E8%AF%81%E4%B8%8E%E7%8A%B6%E6%80%81%E7%AE%A1%E7%90%86"><span class="nav-number">1.2.6.</span> <span class="nav-text">2.6 认证与状态管理</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%89%E3%80%81%E5%90%8E%E7%AB%AF%E5%BC%80%E5%8F%91"><span class="nav-number">1.3.</span> <span class="nav-text">三、后端开发</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#3-1-%E5%88%86%E5%B1%82%E6%9E%B6%E6%9E%84"><span class="nav-number">1.3.1.</span> <span class="nav-text">3.1 分层架构</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#3-2-%E6%95%B0%E6%8D%AE%E5%BA%93%E8%AE%BE%E8%AE%A1"><span class="nav-number">1.3.2.</span> <span class="nav-text">3.2 数据库设计</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#3-3-FastGPT%E9%9B%86%E6%88%90%E4%B8%8EchatId%E9%9A%94%E7%A6%BB"><span class="nav-number">1.3.3.</span> <span class="nav-text">3.3 FastGPT集成与chatId隔离</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#3-4-%E6%96%87%E4%B9%A6docx%E6%8E%92%E7%89%88"><span class="nav-number">1.3.4.</span> <span class="nav-text">3.4 文书docx排版</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#3-5-%E5%90%88%E5%90%8C%E5%AE%A1%E6%9F%A5%E6%8A%A5%E5%91%8Adocx"><span class="nav-number">1.3.5.</span> <span class="nav-text">3.5 合同审查报告docx</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%9B%9B%E3%80%81FastGPT%E8%B0%83%E7%94%A8%E9%93%BE%E8%B7%AF"><span class="nav-number">1.4.</span> <span class="nav-text">四、FastGPT调用链路</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#4-1-AI%E5%AF%B9%E8%AF%9D%E5%AE%8C%E6%95%B4%E9%93%BE%E8%B7%AF"><span class="nav-number">1.4.1.</span> <span class="nav-text">4.1 AI对话完整链路</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#4-2-chatId%E7%9A%84%E8%AE%B0%E5%BF%86%E8%AF%AD%E4%B9%89"><span class="nav-number">1.4.2.</span> <span class="nav-text">4.2 chatId的记忆语义</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BA%94%E3%80%81%E9%83%A8%E7%BD%B2%E4%B8%8E%E8%81%94%E8%B0%83"><span class="nav-number">1.5.</span> <span class="nav-text">五、部署与联调</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#5-1-%E5%89%8D%E5%90%8E%E7%AB%AF%E4%B8%A4%E4%B8%AA%E2%80%9D%E6%9C%8D%E5%8A%A1%E2%80%9D%E7%9A%84%E6%9C%AC%E8%B4%A8%E5%8C%BA%E5%88%AB"><span class="nav-number">1.5.1.</span> <span class="nav-text">5.1 前后端两个”服务”的本质区别</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#5-2-%E8%AF%B7%E6%B1%82%E4%BB%8E%E5%93%AA%E5%8F%91%E5%87%BA%EF%BC%9Ahttp-js%E7%BB%9F%E4%B8%80%E5%B0%81%E8%A3%85"><span class="nav-number">1.5.2.</span> <span class="nav-text">5.2 请求从哪发出：http.js统一封装</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#5-3-%E6%9C%AC%E5%9C%B0%E5%BC%80%E5%8F%91%EF%BC%9AVite%E4%BB%A3%E7%90%86%E6%B6%88%E8%B7%A8%E5%9F%9F"><span class="nav-number">1.5.3.</span> <span class="nav-text">5.3 本地开发：Vite代理消跨域</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#5-4-%E7%BA%BF%E4%B8%8A%E9%83%A8%E7%BD%B2%E6%9E%B6%E6%9E%84"><span class="nav-number">1.5.4.</span> <span class="nav-text">5.4 线上部署架构</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#5-5-CF-Pages-405%E9%94%99%E8%AF%AF%EF%BC%9A%E9%9D%99%E6%80%81%E6%89%98%E7%AE%A1%E4%B8%8D%E8%AE%A4%E8%AF%86POST"><span class="nav-number">1.5.5.</span> <span class="nav-text">5.5 CF Pages 405错误：静态托管不认识POST</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#5-6-%E8%8A%B1%E7%94%9F%E5%A3%B3%EF%BC%9A%E8%AE%A9%E5%AE%B6%E9%87%8C%E7%94%B5%E8%84%91%E2%80%9D%E8%A2%AB%E5%85%AC%E7%BD%91%E8%AE%BF%E9%97%AE%E2%80%9D"><span class="nav-number">1.5.6.</span> <span class="nav-text">5.6 花生壳：让家里电脑”被公网访问”</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#5-7-CORS%E8%B7%A8%E5%9F%9F%EF%BC%9A%E7%BA%BF%E4%B8%8A%E7%9C%9F%E6%AD%A3%E7%9A%84%E2%80%9D%E5%85%83%E5%87%B6%E2%80%9D"><span class="nav-number">1.5.7.</span> <span class="nav-text">5.7 CORS跨域：线上真正的”元凶”</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#%E5%90%8C%E6%BA%90%E7%AD%96%E7%95%A5"><span class="nav-number">1.5.7.1.</span> <span class="nav-text">同源策略</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E8%B7%A8%E5%9F%9F%E8%A2%AB%E6%8B%A6%E7%9A%84%E7%9C%9F%E5%AE%9E%E6%9C%BA%E5%88%B6"><span class="nav-number">1.5.7.2.</span> <span class="nav-text">跨域被拦的真实机制</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E5%90%8E%E7%AB%AFCORS%E7%99%BD%E5%90%8D%E5%8D%95"><span class="nav-number">1.5.7.3.</span> <span class="nav-text">后端CORS白名单</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#5-8-%E5%A4%9A%E5%AE%9E%E4%BE%8B%E2%80%9D%E5%81%87%E9%87%8D%E5%90%AF%E2%80%9D%E5%9D%91"><span class="nav-number">1.5.8.</span> <span class="nav-text">5.8 多实例”假重启”坑</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#5-9-%E9%85%8D%E7%BD%AE%E9%80%9F%E6%9F%A5%E8%A1%A8"><span class="nav-number">1.5.9.</span> <span class="nav-text">5.9 配置速查表</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#5-10-%E6%8E%92%E9%94%99%E6%80%9D%E8%B7%AF%EF%BC%88%E5%89%8D%E7%AB%AF%E8%BF%9E%E4%B8%8D%E4%B8%8A%E5%90%8E%E7%AB%AF%EF%BC%89"><span class="nav-number">1.5.10.</span> <span class="nav-text">5.10 排错思路（前端连不上后端）</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%85%AD%E3%80%81%E9%97%AE%E9%A2%98%E4%B8%8E%E8%A7%A3%E5%86%B3"><span class="nav-number">1.6.</span> <span class="nav-text">六、问题与解决</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E9%97%AE%E9%A2%981%EF%BC%9AFastGPT-chatId%E7%A1%AC%E7%BC%96%E7%A0%81%E5%AF%BC%E8%87%B4%E8%B7%A8%E7%94%A8%E6%88%B7%E8%AE%B0%E5%BF%86%E4%B8%B2%E5%8F%B0"><span class="nav-number">1.6.1.</span> <span class="nav-text">问题1：FastGPT chatId硬编码导致跨用户记忆串台</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E9%97%AE%E9%A2%982%EF%BC%9A%E6%96%87%E4%B9%A6%E4%B8%8B%E8%BD%BD%E4%B8%A2%E5%A4%B1AI%E7%94%9F%E6%88%90%E5%86%85%E5%AE%B9"><span class="nav-number">1.6.2.</span> <span class="nav-text">问题2：文书下载丢失AI生成内容</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E9%97%AE%E9%A2%983%EF%BC%9Apython-docx%E4%B8%AD%E6%96%87%E5%8F%98%E6%96%B9%E5%9D%97"><span class="nav-number">1.6.3.</span> <span class="nav-text">问题3：python-docx中文变方块</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E9%97%AE%E9%A2%984%EF%BC%9A%E5%8E%86%E5%8F%B2%E5%88%97%E8%A1%A8%E7%99%BB%E5%BD%95%E5%90%8E%E6%98%BE%E7%A4%BA%E2%80%9D%E6%97%A0%E5%8E%86%E5%8F%B2%E2%80%9D"><span class="nav-number">1.6.4.</span> <span class="nav-text">问题4：历史列表登录后显示”无历史”</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E9%97%AE%E9%A2%985%EF%BC%9ACORS-400-Disallowed-CORS-origin"><span class="nav-number">1.6.5.</span> <span class="nav-text">问题5：CORS 400 Disallowed CORS origin</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%83%E3%80%81%E6%9C%AA%E8%A7%A3%E5%86%B3%E7%9A%84%E9%97%AE%E9%A2%98"><span class="nav-number">1.7.</span> <span class="nav-text">七、未解决的问题</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BB%8A%E6%97%A5%E6%80%BB%E7%BB%93"><span class="nav-number">1.8.</span> <span class="nav-text">今日总结</span></a></li></ol></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="ZHX"
+      src="/images/avatar.jpeg">
+  <p class="site-author-name" itemprop="name">ZHX</p>
+  <div class="site-description" itemprop="description">记录编程学习、项目实战和踩坑笔记</div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">46</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+            <a href="/categories/">
+          
+        <span class="site-state-item-count">10</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+  </nav>
+</div>
+
+
+
+      </div>
+        <div class="back-to-top motion-element">
+          <i class="fa fa-arrow-up"></i>
+          <span>0%</span>
+        </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2026</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">ZHX</span>
+</div>
+  <div class="powered-by">由 <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Gemini</a> 强力驱动
+  </div>
+
+        
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/pisces.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+
+</body>
+</html>
