@@ -26,8 +26,8 @@
 <meta property="og:site_name" content="我的学习日记">
 <meta property="og:description" content="day37 乐观锁解决超卖、一人一单与集群锁失效一、乐观锁解决超卖问题1.1 乐观锁思路乐观锁：认为线程安全问题小概率发生，不添加锁，让线程并行执行，提高效率。在更新时判断数据是否与之前查询到的一致，一致则更新。 与悲观锁的对比：    维度 悲观锁 乐观锁    核心思想 认为冲突一定会发生，先加锁再操作 认为冲突概率低，不加锁，更新时判断   并发性 串行执行，吞吐量低 并行执行，吞吐量高">
 <meta property="og:locale" content="zh_CN">
-<meta property="article:published_time" content="2026-09-16T14:28:30.000Z">
-<meta property="article:modified_time" content="2026-09-16T12:38:46.062Z">
+<meta property="article:published_time" content="2026-09-16T12:53:31.000Z">
+<meta property="article:modified_time" content="2026-09-16T12:53:26.307Z">
 <meta property="article:author" content="ZHX">
 <meta name="twitter:card" content="summary">
 
@@ -184,7 +184,20 @@
               <span class="post-meta-item-text">发表于</span>
               
 
-              <time title="创建时间：2026-09-16 22:28:30 / 修改时间：20:38:46" itemprop="dateCreated datePublished" datetime="2026-09-16T22:28:30+08:00">2026-09-16</time>
+              <time title="创建时间：2026-09-16 20:53:31 / 修改时间：20:53:26" itemprop="dateCreated datePublished" datetime="2026-09-16T20:53:31+08:00">2026-09-16</time>
+            </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E7%AC%94%E8%AE%B0/" itemprop="url" rel="index"><span itemprop="name">笔记</span></a>
+                </span>
+                  ，
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E7%AC%94%E8%AE%B0/Redis/" itemprop="url" rel="index"><span itemprop="name">Redis</span></a>
+                </span>
             </span>
 
           
@@ -421,13 +434,10 @@
         
     <div class="post-nav">
       <div class="post-nav-item">
-    <a href="/2026/09/15/%E5%A4%8D%E7%9B%98%E4%B8%8E%E7%AC%94%E8%AE%B0/%E5%A4%8D%E7%9B%98/day36%20%E7%A7%92%E6%9D%80%E5%AE%9E%E7%8E%B0,%E6%82%B2%E8%A7%82%E9%94%81%E8%A7%A3%E5%86%B3%E8%B6%85%E5%8D%96/" rel="prev" title="day36 秒杀实现与悲观锁解决超卖">
-      <i class="fa fa-chevron-left"></i> day36 秒杀实现与悲观锁解决超卖
+    <a href="/2026/09/16/%E5%A4%8D%E7%9B%98%E4%B8%8E%E7%AC%94%E8%AE%B0/%E5%A4%8D%E7%9B%98/day37%20%E4%B9%90%E8%A7%82%E9%94%81%E8%A7%A3%E5%86%B3%E8%B6%85%E5%8D%96%E3%80%81%E4%B8%80%E4%BA%BA%E4%B8%80%E5%8D%95/" rel="prev" title="day37 乐观锁解决超卖、一人一单">
+      <i class="fa fa-chevron-left"></i> day37 乐观锁解决超卖、一人一单
     </a></div>
-      <div class="post-nav-item">
-    <a href="/2026/09/16/%E5%A4%8D%E7%9B%98%E4%B8%8E%E7%AC%94%E8%AE%B0/%E5%A4%8D%E7%9B%98/day37%20%E4%B9%90%E8%A7%82%E9%94%81%E8%A7%A3%E5%86%B3%E8%B6%85%E5%8D%96%E3%80%81%E4%B8%80%E4%BA%BA%E4%B8%80%E5%8D%95/" rel="next" title="day37 乐观锁解决超卖、一人一单">
-      day37 乐观锁解决超卖、一人一单 <i class="fa fa-chevron-right"></i>
-    </a></div>
+      <div class="post-nav-item"></div>
     </div>
       </footer>
     
