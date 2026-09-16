@@ -1,0 +1,478 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 8.1.2">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/favicon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon.png">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/all.min.css">
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"www.blog-x.cc.cd","root":"/","scheme":"Gemini","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"always","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":false,"show_result":false,"style":null},"back2top":{"enable":true,"sidebar":true,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":false,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}}};
+  </script>
+
+  <meta name="description" content="1. 今天做了什么 实现秒杀券下单功能 分析高并发下的超卖问题 使用悲观锁（synchronized）解决超卖问题 学习了编程式事务 TransactionTemplate 的用法  2. 核心知识点秒杀券表设计  普通券和秒杀券都存在同一张表，用一个字段做区分 秒杀券还有一张独立表（tb_seckill_voucher）存秒杀券特有的信息：库存、开始时间、结束时间  秒杀下单流程  查询秒杀券信">
+<meta property="og:type" content="article">
+<meta property="og:title" content="day36 秒杀实现与悲观锁解决超卖">
+<meta property="og:url" content="https://www.blog-x.cc.cd/2026/09/15/%E5%A4%8D%E7%9B%98%E4%B8%8E%E7%AC%94%E8%AE%B0/%E5%A4%8D%E7%9B%98/day36%20%E7%A7%92%E6%9D%80%E5%AE%9E%E7%8E%B0,%E6%82%B2%E8%A7%82%E9%94%81%E8%A7%A3%E5%86%B3%E8%B6%85%E5%8D%96/index.html">
+<meta property="og:site_name" content="我的学习日记">
+<meta property="og:description" content="1. 今天做了什么 实现秒杀券下单功能 分析高并发下的超卖问题 使用悲观锁（synchronized）解决超卖问题 学习了编程式事务 TransactionTemplate 的用法  2. 核心知识点秒杀券表设计  普通券和秒杀券都存在同一张表，用一个字段做区分 秒杀券还有一张独立表（tb_seckill_voucher）存秒杀券特有的信息：库存、开始时间、结束时间  秒杀下单流程  查询秒杀券信">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2026-09-15T14:28:30.000Z">
+<meta property="article:modified_time" content="2026-09-14T16:40:01.763Z">
+<meta property="article:author" content="ZHX">
+<meta name="twitter:card" content="summary">
+
+<link rel="canonical" href="https://www.blog-x.cc.cd/2026/09/15/%E5%A4%8D%E7%9B%98%E4%B8%8E%E7%AC%94%E8%AE%B0/%E5%A4%8D%E7%9B%98/day36%20%E7%A7%92%E6%9D%80%E5%AE%9E%E7%8E%B0,%E6%82%B2%E8%A7%82%E9%94%81%E8%A7%A3%E5%86%B3%E8%B6%85%E5%8D%96/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'zh-CN'
+  };
+</script>
+
+  <title>day36 秒杀实现与悲观锁解决超卖 | 我的学习日记</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">我的学习日记</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="main-menu menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档<span class="badge">50</span></a>
+
+  </li>
+        <li class="menu-item menu-item-categories">
+
+    <a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分类<span class="badge">10</span></a>
+
+  </li>
+        <li class="menu-item menu-item-about">
+
+    <a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>关于</a>
+
+  </li>
+        <li class="menu-item menu-item-tags">
+
+    <a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签<span class="badge">0</span></a>
+
+  </li>
+  </ul>
+</nav>
+
+
+
+
+</div>
+    </header>
+
+    
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://www.blog-x.cc.cd/2026/09/15/%E5%A4%8D%E7%9B%98%E4%B8%8E%E7%AC%94%E8%AE%B0/%E5%A4%8D%E7%9B%98/day36%20%E7%A7%92%E6%9D%80%E5%AE%9E%E7%8E%B0,%E6%82%B2%E8%A7%82%E9%94%81%E8%A7%A3%E5%86%B3%E8%B6%85%E5%8D%96/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.jpeg">
+      <meta itemprop="name" content="ZHX">
+      <meta itemprop="description" content="记录编程学习、项目实战和踩坑笔记">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="我的学习日记">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          day36 秒杀实现与悲观锁解决超卖
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+              
+
+              <time title="创建时间：2026-09-15 22:28:30 / 修改时间：00:40:01" itemprop="dateCreated datePublished" datetime="2026-09-15T22:28:30+08:00">2026-09-15</time>
+            </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E5%A4%8D%E7%9B%98/" itemprop="url" rel="index"><span itemprop="name">复盘</span></a>
+                </span>
+                  ，
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E5%A4%8D%E7%9B%98/Redis/" itemprop="url" rel="index"><span itemprop="name">Redis</span></a>
+                </span>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+      <div class="post-body" itemprop="articleBody">
+
+        
+          <h2 id="1-今天做了什么"><a href="#1-今天做了什么" class="headerlink" title="1. 今天做了什么"></a>1. 今天做了什么</h2><ul>
+<li>实现秒杀券下单功能</li>
+<li>分析高并发下的超卖问题</li>
+<li>使用悲观锁（synchronized）解决超卖问题</li>
+<li>学习了编程式事务 TransactionTemplate 的用法</li>
+</ul>
+<h2 id="2-核心知识点"><a href="#2-核心知识点" class="headerlink" title="2. 核心知识点"></a>2. 核心知识点</h2><p><strong>秒杀券表设计</strong></p>
+<ul>
+<li>普通券和秒杀券都存在同一张表，用一个字段做区分</li>
+<li>秒杀券还有一张独立表（tb_seckill_voucher）存秒杀券特有的信息：库存、开始时间、结束时间</li>
+</ul>
+<p><strong>秒杀下单流程</strong></p>
+<ol>
+<li>查询秒杀券信息</li>
+<li>判断时间是否在秒杀时间内（开始时间、结束时间校验）</li>
+<li>判断库存是否足够</li>
+<li>扣减库存</li>
+<li>创建订单</li>
+<li>返回订单id</li>
+</ol>
+<p><strong>超卖问题</strong></p>
+<ul>
+<li>现象：卖出超过库存数量的商品</li>
+<li>原因：线程1判断库存后、尚未完成扣减之前，线程2也进行了判断；高并发下很多线程几乎同时判断库存，都认为充足，导致超卖</li>
+</ul>
+<p><strong>悲观锁</strong></p>
+<ul>
+<li>认为线程安全问题一定会发生，加锁让线程串行执行</li>
+<li><code>synchronized</code>、<code>Lock</code> 以及 Redis 实现的都是悲观锁</li>
+<li>保证了线程安全，但串行执行影响性能</li>
+</ul>
+<p><strong>正确实现：锁 + 编程式事务</strong></p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@Autowired</span></span><br><span class="line"><span class="keyword">private</span> TransactionTemplate transactionTemplate;</span><br><span class="line"></span><br><span class="line"><span class="meta">@Override</span></span><br><span class="line"><span class="keyword">public</span> <span class="type">Result</span> <span class="title function_">seckillVoucher</span><span class="params">(Long voucherId)</span> &#123;</span><br><span class="line">    <span class="keyword">synchronized</span>(VoucherOrderServiceImpl.class)&#123;</span><br><span class="line">        <span class="keyword">return</span> transactionTemplate.execute(status -&gt; doSeckillVoucher(voucherId));</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="keyword">public</span> <span class="type">Result</span> <span class="title function_">doSeckillVoucher</span><span class="params">(Long voucherId)</span> &#123;</span><br><span class="line">    <span class="comment">//查询秒杀信息</span></span><br><span class="line">    <span class="comment">//判断时间是否在秒杀时间内</span></span><br><span class="line">    <span class="comment">//判断秒杀是否结束</span></span><br><span class="line">    <span class="comment">//判断库存是否足够</span></span><br><span class="line">    <span class="comment">//更新库存</span></span><br><span class="line">    <span class="type">boolean</span> <span class="variable">success</span> <span class="operator">=</span> seckillVoucherService.update()</span><br><span class="line">            .setSql(<span class="string">&quot;stock=stock-1&quot;</span>)</span><br><span class="line">            .eq(<span class="string">&quot;voucher_id&quot;</span>, voucherId)</span><br><span class="line">            .gt(<span class="string">&quot;stock&quot;</span>, <span class="number">0</span>)</span><br><span class="line">            .update();</span><br><span class="line">    <span class="keyword">if</span> (!success) &#123;</span><br><span class="line">        <span class="keyword">return</span> Result.fail(<span class="string">&quot;库存不足&quot;</span>);</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="comment">//创建订单</span></span><br><span class="line">    <span class="comment">//返回订单id</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<ul>
+<li>关键点：锁的释放一定要晚于事务提交</li>
+<li>更新操作添加 <code>.gt(&quot;stock&quot;, 0)</code> 也可防止超卖（CAS 乐观锁兜底）</li>
+</ul>
+<p><strong>错误示范1：锁释放早于事务提交</strong></p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@Transactional</span></span><br><span class="line"><span class="meta">@Override</span></span><br><span class="line"><span class="keyword">public</span> <span class="type">Result</span> <span class="title function_">seckillVoucher</span><span class="params">(Long voucherId)</span> &#123;</span><br><span class="line">    <span class="keyword">synchronized</span>(VoucherOrderServiceImpl.class)&#123;</span><br><span class="line">        <span class="comment">//查询秒杀信息</span></span><br><span class="line">        <span class="comment">//判断时间是否在秒杀时间内</span></span><br><span class="line">        <span class="comment">//判断秒杀是否结束</span></span><br><span class="line">        <span class="comment">//判断库存是否足够</span></span><br><span class="line">        <span class="comment">//更新库存</span></span><br><span class="line">    &#125;</span><br><span class="line">    <span class="comment">//创建订单</span></span><br><span class="line">    <span class="comment">//返回订单id</span></span><br><span class="line">    <span class="keyword">return</span> Result.ok(orderId);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<ul>
+<li>错误原因：锁的释放早于事务的提交，释放锁之后才会提交事务，所以在提交事务之前，其他线程查询到的都是未扣减的旧库存</li>
+</ul>
+<p><strong>错误示范2：同类调用导致 @Transactional 失效</strong></p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@Override</span></span><br><span class="line"><span class="keyword">public</span> <span class="type">Result</span> <span class="title function_">seckillVoucher</span><span class="params">(Long voucherId)</span> &#123;</span><br><span class="line">    <span class="keyword">synchronized</span>(VoucherOrderServiceImpl.class)&#123;</span><br><span class="line">        <span class="keyword">return</span> doSeckillVoucher(voucherId);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="meta">@Transactional</span></span><br><span class="line"><span class="keyword">public</span> <span class="type">Result</span> <span class="title function_">doSeckillVoucher</span><span class="params">(Long voucherId)</span> &#123;</span><br><span class="line">    <span class="comment">//查询秒杀信息</span></span><br><span class="line">    <span class="comment">//判断时间是否在秒杀时间内</span></span><br><span class="line">    <span class="comment">//判断秒杀是否结束</span></span><br><span class="line">    <span class="comment">//判断库存是否足够</span></span><br><span class="line">    <span class="comment">//更新库存</span></span><br><span class="line">    <span class="comment">//创建订单</span></span><br><span class="line">    <span class="comment">//返回订单id</span></span><br><span class="line">    <span class="keyword">return</span> Result.ok(orderId);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<ul>
+<li>错误原因：<code>@Transactional</code> 是基于动态代理实现的，其他类注入的实际是代理对象，所以可以进行事务管理；而在同一个类中，<code>seckillVoucher</code> 中调用 <code>doSeckillVoucher</code> 实际上是 <code>this.doSeckillVoucher(voucherId)</code>，this 不是代理对象，导致 <code>@Transactional</code> 失效</li>
+</ul>
+<p><strong>事务的两种写法</strong></p>
+<ol>
+<li>声明式事务：<code>@Transactional</code></li>
+<li>编程式事务：</li>
+</ol>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">TransactionStatus</span> <span class="variable">status</span> <span class="operator">=</span> transactionManager.getTransaction(...); <span class="comment">// 开启</span></span><br><span class="line"><span class="keyword">try</span> &#123;</span><br><span class="line">    <span class="type">Result</span> <span class="variable">result</span> <span class="operator">=</span> doSeckillVoucher(voucherId);</span><br><span class="line">    transactionManager.commit(status); <span class="comment">// 提交</span></span><br><span class="line">    <span class="keyword">return</span> result;</span><br><span class="line">&#125; <span class="keyword">catch</span> (Exception e) &#123;</span><br><span class="line">    transactionManager.rollback(status); <span class="comment">// 回滚</span></span><br><span class="line">    <span class="keyword">throw</span> e;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<ul>
+<li>Spring 提供了 <code>TransactionTemplate</code> 来封装以上代码：</li>
+</ul>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">Result</span> <span class="variable">result</span> <span class="operator">=</span> transactionTemplate.execute(status -&gt; &#123;</span><br><span class="line">    <span class="comment">// 业务逻辑</span></span><br><span class="line">    <span class="keyword">return</span> Result.ok(orderId);</span><br><span class="line">&#125;);</span><br><span class="line"></span><br><span class="line">transactionTemplate.executeWithoutResult(status -&gt; &#123;</span><br><span class="line">    <span class="comment">// 业务逻辑</span></span><br><span class="line">&#125;);</span><br></pre></td></tr></table></figure>
+
+<ul>
+<li>编程式事务，只要有 <code>spring-boot-starter-jdbc</code> 或 <code>mybatis-plus-boot-starter</code>，就已经包含了 <code>spring-tx</code> 和事务相关类，不需要额外加依赖，只要配置好数据库的数据源即可</li>
+</ul>
+<h2 id="3-深度思考"><a href="#3-深度思考" class="headerlink" title="3. 深度思考"></a>3. 深度思考</h2><h2 id="4-踩过的坑"><a href="#4-踩过的坑" class="headerlink" title="4. 踩过的坑"></a>4. 踩过的坑</h2><ul>
+<li>锁的释放时机必须晚于事务提交，否则释放锁后其他线程能读到未扣减的旧库存，仍会超卖</li>
+<li>同一个类中方法调用 <code>@Transactional</code> 会失效，因为 this 不是代理对象</li>
+</ul>
+<h2 id="5-遗留问题-想不通"><a href="#5-遗留问题-想不通" class="headerlink" title="5. 遗留问题 &#x2F; 想不通"></a>5. 遗留问题 &#x2F; 想不通</h2>
+      </div>
+
+    
+    
+    
+
+      <footer class="post-footer">
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/2026/09/15/%E5%A4%8D%E7%9B%98%E4%B8%8E%E7%AC%94%E8%AE%B0/%E7%AC%94%E8%AE%B0/day36%20%E7%A7%92%E6%9D%80%E5%AE%9E%E7%8E%B0%E4%B8%8E%E6%82%B2%E8%A7%82%E9%94%81%E8%A7%A3%E5%86%B3%E8%B6%85%E5%8D%96/" rel="prev" title="day36 秒杀实现与悲观锁解决超卖">
+      <i class="fa fa-chevron-left"></i> day36 秒杀实现与悲观锁解决超卖
+    </a></div>
+      <div class="post-nav-item">
+    <a href="/2026/09/16/%E5%A4%8D%E7%9B%98%E4%B8%8E%E7%AC%94%E8%AE%B0/%E7%AC%94%E8%AE%B0/day37%20%E4%B9%90%E8%A7%82%E9%94%81%E8%A7%A3%E5%86%B3%E8%B6%85%E5%8D%96%E3%80%81%E4%B8%80%E4%BA%BA%E4%B8%80%E5%8D%95/" rel="next" title="day37 乐观锁解决超卖、一人一单">
+      day37 乐观锁解决超卖、一人一单 <i class="fa fa-chevron-right"></i>
+    </a></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+
+
+          </div>
+          
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#1-%E4%BB%8A%E5%A4%A9%E5%81%9A%E4%BA%86%E4%BB%80%E4%B9%88"><span class="nav-number">1.</span> <span class="nav-text">1. 今天做了什么</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#2-%E6%A0%B8%E5%BF%83%E7%9F%A5%E8%AF%86%E7%82%B9"><span class="nav-number">2.</span> <span class="nav-text">2. 核心知识点</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#3-%E6%B7%B1%E5%BA%A6%E6%80%9D%E8%80%83"><span class="nav-number">3.</span> <span class="nav-text">3. 深度思考</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#4-%E8%B8%A9%E8%BF%87%E7%9A%84%E5%9D%91"><span class="nav-number">4.</span> <span class="nav-text">4. 踩过的坑</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#5-%E9%81%97%E7%95%99%E9%97%AE%E9%A2%98-%E6%83%B3%E4%B8%8D%E9%80%9A"><span class="nav-number">5.</span> <span class="nav-text">5. 遗留问题 &#x2F; 想不通</span></a></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="ZHX"
+      src="/images/avatar.jpeg">
+  <p class="site-author-name" itemprop="name">ZHX</p>
+  <div class="site-description" itemprop="description">记录编程学习、项目实战和踩坑笔记</div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">50</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+            <a href="/categories/">
+          
+        <span class="site-state-item-count">10</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+  </nav>
+</div>
+
+
+
+      </div>
+        <div class="back-to-top motion-element">
+          <i class="fa fa-arrow-up"></i>
+          <span>0%</span>
+        </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2026</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">ZHX</span>
+</div>
+  <div class="powered-by">由 <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Gemini</a> 强力驱动
+  </div>
+
+        
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/pisces.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+
+</body>
+</html>

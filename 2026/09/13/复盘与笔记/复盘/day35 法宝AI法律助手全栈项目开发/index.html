@@ -1,0 +1,478 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 8.1.2">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/favicon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon.png">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/all.min.css">
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"www.blog-x.cc.cd","root":"/","scheme":"Gemini","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"always","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":false,"show_result":false,"style":null},"back2top":{"enable":true,"sidebar":true,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":false,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}}};
+  </script>
+
+  <meta name="description" content="1. 今天做了什么 最初用 Trae 创建 Vue3+Vite 前端项目（首页三模块卡片、深蓝+金色主题、Element Plus） 用 WorkBuddy 接手后补充三个功能页（AI法律咨询、文书生成、合同审查） 前端直连 FastGPT 实现AI对话流式输出（SSE、思维链实时展示、appId 放请求体） 搭建 FastAPI 后端（FastAPI+SQLAlchemy2.0+MySQL，5张">
+<meta property="og:type" content="article">
+<meta property="og:title" content="day35 法宝AI法律助手全栈项目开发">
+<meta property="og:url" content="https://www.blog-x.cc.cd/2026/09/13/%E5%A4%8D%E7%9B%98%E4%B8%8E%E7%AC%94%E8%AE%B0/%E5%A4%8D%E7%9B%98/day35%20%E6%B3%95%E5%AE%9DAI%E6%B3%95%E5%BE%8B%E5%8A%A9%E6%89%8B%E5%85%A8%E6%A0%88%E9%A1%B9%E7%9B%AE%E5%BC%80%E5%8F%91/index.html">
+<meta property="og:site_name" content="我的学习日记">
+<meta property="og:description" content="1. 今天做了什么 最初用 Trae 创建 Vue3+Vite 前端项目（首页三模块卡片、深蓝+金色主题、Element Plus） 用 WorkBuddy 接手后补充三个功能页（AI法律咨询、文书生成、合同审查） 前端直连 FastGPT 实现AI对话流式输出（SSE、思维链实时展示、appId 放请求体） 搭建 FastAPI 后端（FastAPI+SQLAlchemy2.0+MySQL，5张">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2026-09-13T05:30:00.000Z">
+<meta property="article:modified_time" content="2026-09-14T02:22:03.459Z">
+<meta property="article:author" content="ZHX">
+<meta name="twitter:card" content="summary">
+
+<link rel="canonical" href="https://www.blog-x.cc.cd/2026/09/13/%E5%A4%8D%E7%9B%98%E4%B8%8E%E7%AC%94%E8%AE%B0/%E5%A4%8D%E7%9B%98/day35%20%E6%B3%95%E5%AE%9DAI%E6%B3%95%E5%BE%8B%E5%8A%A9%E6%89%8B%E5%85%A8%E6%A0%88%E9%A1%B9%E7%9B%AE%E5%BC%80%E5%8F%91/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'zh-CN'
+  };
+</script>
+
+  <title>day35 法宝AI法律助手全栈项目开发 | 我的学习日记</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">我的学习日记</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="main-menu menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档<span class="badge">50</span></a>
+
+  </li>
+        <li class="menu-item menu-item-categories">
+
+    <a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分类<span class="badge">10</span></a>
+
+  </li>
+        <li class="menu-item menu-item-about">
+
+    <a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>关于</a>
+
+  </li>
+        <li class="menu-item menu-item-tags">
+
+    <a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签<span class="badge">0</span></a>
+
+  </li>
+  </ul>
+</nav>
+
+
+
+
+</div>
+    </header>
+
+    
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://www.blog-x.cc.cd/2026/09/13/%E5%A4%8D%E7%9B%98%E4%B8%8E%E7%AC%94%E8%AE%B0/%E5%A4%8D%E7%9B%98/day35%20%E6%B3%95%E5%AE%9DAI%E6%B3%95%E5%BE%8B%E5%8A%A9%E6%89%8B%E5%85%A8%E6%A0%88%E9%A1%B9%E7%9B%AE%E5%BC%80%E5%8F%91/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.jpeg">
+      <meta itemprop="name" content="ZHX">
+      <meta itemprop="description" content="记录编程学习、项目实战和踩坑笔记">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="我的学习日记">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          day35 法宝AI法律助手全栈项目开发
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2026-09-13 13:30:00" itemprop="dateCreated datePublished" datetime="2026-09-13T13:30:00+08:00">2026-09-13</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="far fa-calendar-check"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2026-09-14 10:22:03" itemprop="dateModified" datetime="2026-09-14T10:22:03+08:00">2026-09-14</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E5%A4%8D%E7%9B%98/" itemprop="url" rel="index"><span itemprop="name">复盘</span></a>
+                </span>
+                  ，
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E5%A4%8D%E7%9B%98/%E5%B0%8F%E9%A1%B9%E7%9B%AE/" itemprop="url" rel="index"><span itemprop="name">小项目</span></a>
+                </span>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+      <div class="post-body" itemprop="articleBody">
+
+        
+          <h2 id="1-今天做了什么"><a href="#1-今天做了什么" class="headerlink" title="1. 今天做了什么"></a>1. 今天做了什么</h2><ol>
+<li>最初用 Trae 创建 Vue3+Vite 前端项目（首页三模块卡片、深蓝+金色主题、Element Plus）</li>
+<li>用 WorkBuddy 接手后补充三个功能页（AI法律咨询、文书生成、合同审查）</li>
+<li>前端直连 FastGPT 实现AI对话流式输出（SSE、思维链实时展示、appId 放请求体）</li>
+<li>搭建 FastAPI 后端（FastAPI+SQLAlchemy2.0+MySQL，5张表，4个API模块，JWT认证）</li>
+<li>前端从直连FastGPT改为调后端接口（axios实例、token自动携带、统一响应解包）</li>
+<li>后端三个服务接入FastGPT（ai_service对话、document_service文书生成、contract_service合同审查）</li>
+<li>文书生成从纯文本改为结构化JSON返回（8种section type，确定性Word排版）</li>
+<li>合同审查报告下载实现（python-docx生成Word，RFC 5987中文文件名编码）</li>
+<li>文书下载实现（从简陋逐行写入 → 专业docx排版服务，按文书类型差异化版式）</li>
+<li>百分比进度条替换为阶段骨架提示（4&#x2F;5阶段清单+旋转图标，覆盖5-15s等待窗口）</li>
+<li>前端历史记录UI（对话侧栏、文书历史卡、审查历史卡，下载原文件&#x2F;报告）</li>
+<li>FastGPT chatId跨用户&#x2F;跨对话串台修复（硬编码→按用户+记录唯一）</li>
+<li>Word文档全文改纯黑字体、登录状态变化时历史列表自动刷新</li>
+<li>线上部署（CF Pages前端+花生壳内网穿透后端），CORS跨域修复</li>
+<li>Python环境问题：系统3.15 beta无预编译包 → 安装3.12.10绕过</li>
+</ol>
+<h2 id="2-核心知识点"><a href="#2-核心知识点" class="headerlink" title="2. 核心知识点"></a>2. 核心知识点</h2><ul>
+<li><strong>FastGPT OpenAI兼容接口</strong>：<code>/v1/chat/completions</code>，<code>chatId</code>是会话主键+记忆开关+落库开关，<code>appId</code>放请求体内（非Header拼接）</li>
+<li><strong>FastGPT chatId隔离</strong>：三个模块的chatId必须按”模块前缀+用户ID+表主键”命名，否则跨用户记忆串台</li>
+<li><strong>SSE流式解析</strong>：前端用<code>fetch</code>+<code>getReader()</code>逐行解析<code>data: {...}</code>，处理<code>reasoning_content</code>（思维链）和<code>content</code>（正文）两种字段</li>
+<li><strong>FastAPI分层架构</strong>：models→schemas→services→api四层，依赖注入管理DB会话和当前用户</li>
+<li><strong>JWT认证流程</strong>：后端<code>python-jose</code>签发token → 前端存localStorage → axios拦截器自动加Bearer头 → 后端<code>get_current_user</code>依赖校验</li>
+<li><strong>python-docx中文字体</strong>：必须同时设置<code>ascii</code>和<code>eastAsia</code>两套字体族，否则Word打开中文变方块</li>
+<li><strong>结构化文书JSON schema</strong>：<code>{title, sections: [{type, ...}]}</code>，8种type（party&#x2F;heading&#x2F;numbered&#x2F;paragraph&#x2F;center&#x2F;signature&#x2F;blank&#x2F;notice），每种对应确定性Word样式</li>
+<li><strong>RFC 5987中文文件名</strong>：<code>Content-Disposition: attachment; filename=&quot;fallback.docx&quot;; filename*=UTF-8&#39;&#39;%E4%B8%AD%E6%96%87.docx</code>，前端需<code>Access-Control-Expose-Headers</code></li>
+<li><strong>Vue watch监听全局状态</strong>：<code>useAuth()</code>返回的<code>user</code>是全局单例ref，组件内<code>watch(isLoggedIn)</code>可在登录状态变化时自动触发操作</li>
+<li><strong>Vite代理仅开发环境生效</strong>：生产构建后&#x2F;api请求直接打到静态服务器返回405，需用<code>VITE_API_BASE_URL</code>环境变量拼完整后端地址</li>
+<li><strong>import.meta.env编译时替换</strong>：Vite打包时把<code>import.meta.env.VITE_API_BASE_URL</code>直接替换成字符串常量，改环境变量后必须重新build才生效</li>
+<li><strong>CORS预检机制</strong>：非简单请求浏览器先发OPTIONS（preflight），后端响应头必须带<code>Access-Control-Allow-Origin</code>才放行；本地走Vite代理是同源根本不触发CORS</li>
+<li><strong>Vue Router驱动页面切换</strong>：router-view算组件+component :is渲染，pushState只改地址栏不发请求（SPA无刷新切换），currentRoute响应式对象是URL与页面间的桥</li>
+<li><strong>URL驱动vs状态驱动</strong>：手动activeIndex不支持前进后退&#x2F;刷新恢复&#x2F;分享；路由方案每个页面有独立URL，懒加载按需下载，扩展只需加路由+组件</li>
+</ul>
+<h2 id="3-深度思考"><a href="#3-深度思考" class="headerlink" title="3. 深度思考"></a>3. 深度思考</h2><ul>
+<li><strong>为什么文书生成需要结构化JSON</strong>：纯文本靠正则猜排版（<code>len&lt;=12 and no冒号</code>），不可靠且不可扩展；JSON让每种section type对应确定性的Word样式，AI和降级模板共用同一schema，前后端对齐零成本</li>
+<li><strong>chatId硬编码的隐蔽性</strong>：前端展示完全正确（后端按conversation_id隔离了消息），问题藏在FastGPT侧——所有用户共用一条”记忆”，AI能准确复述别人的咨询内容。这种bug不在自己系统内，极难发现</li>
+<li><strong>占位符长度区分</strong>：人名6下划线、身份证18、电话11……比统一<code>____</code>合理得多，打印出来手写填空时视觉宽度与实际数据匹配</li>
+<li><strong>进度条vs骨架提示</strong>：<code>el-progress</code>百分比进度条无法预估等待时间，1秒到100%然后卡住是 Worse UX；阶段清单让用户知道”在做什么”而非”做了百分之几”</li>
+<li><strong>先生成后入库 vs 先入库后生成</strong>：文书生成原来先调FastGPT再存记录，导致调用时没有主键可用作chatId；改为先建空记录拿主键→生成→回填，一次额外commit换来隔离保障</li>
+<li><strong>本地没问题一上线就跨域</strong>：本质是两条链路不同——本地Vite代理让浏览器认为是同源（CORS根本不触发），线上前端和后端分属不同域名，浏览器才执行同源策略检查。所以本地验证通过不等于线上没问题</li>
+<li><strong>pushState vs 整页跳转</strong>：<code>router-link</code>拦截了<code>&lt;a&gt;</code>的默认行为，只改地址栏+更新响应式状态，浏览器不重新加载。这就是SPA”切页无刷新”的全部秘密，也是为什么URL变了但F12里看不到任何网络请求</li>
+</ul>
+<h2 id="4-踩过的坑"><a href="#4-踩过的坑" class="headerlink" title="4. 踩过的坑"></a>4. 踩过的坑</h2><ul>
+<li><strong>FastGPT appId is empty</strong>：Key是通用Key而非应用专属Key，三种Auth格式试错（纯Key ❌、Bearer appId-key ❌、appId放请求体 ✅）</li>
+<li><strong>Python 3.15 beta无预编译包</strong>：pydantic-core、pyyaml没有wheel，源码编译需Rust且rustup安装失败；最终用<code>uv</code>下载CPython 3.12.10安装到项目目录</li>
+<li><strong>双气泡问题</strong>：发送后预插空AI气泡+”正在输入”独立一行&#x3D;两组头像；合并为同一气泡内显示打字动效</li>
+<li><strong>CORS 400 Disallowed CORS origin</strong>：改.env后残留python进程仍用旧配置（6个进程两组多开），必须杀干净重启</li>
+<li><strong>合同审查500</strong>：<code>review_contract()</code>是async但调用缺<code>await</code>，coroutine对象被直接JSON序列化</li>
+<li><strong>DataGrip看不到新建库</strong>：schema列表缓存未刷新，需手动Synchronize或在Properties→Schemas里勾选</li>
+<li><strong>WinError 10013端口占用</strong>：冒烟测试启动的uvicorn后台未退出，占着8000端口</li>
+<li><strong>文书下载第一轮丢AI内容</strong>：DownloadRequest改成只收form_data，下载变成模板拼接；正确做法是保留AI生成内容走智能排版</li>
+<li><strong>npm空文件遮蔽</strong>：<code>C:\WINDOWS\system32\npm</code>是0字节空文件，优先级高于Node.js安装目录，导致npm命令无任何输出</li>
+<li><strong>历史列表登录后不加载</strong>：onMounted时未登录直接return，之后登录状态变化无人监听；需watch(isLoggedIn)</li>
+<li><strong>CF Pages 405 Method Not Allowed</strong>：前端没配<code>VITE_API_BASE_URL</code>，请求发给静态托管→POST方法不被允许；解法：配环境变量让请求直接打到花生壳</li>
+<li><strong>npm run preview连不上后端</strong>：preview不加载<code>server.proxy</code>（那是dev专用），build产物里没有代理逻辑</li>
+<li><strong>.env改了但”假重启”</strong>：Windows上关窗口杀不干净python进程，6个残留进程占着8000用旧配置；必须<code>Get-Process python | Stop-Process -Force</code>清场</li>
+</ul>
+<h2 id="5-遗留问题-想不通"><a href="#5-遗留问题-想不通" class="headerlink" title="5. 遗留问题 &#x2F; 想不通"></a>5. 遗留问题 &#x2F; 想不通</h2><ul>
+<li>FastGPT后台旧记录（<code>fabao-backend</code>等硬编码chatId产生的）需手动删除，代码不会自动清理</li>
+<li>前端删除对话时后端只删MySQL，FastGPT侧chat记录残留（chatId唯一化后不再被读写，无害但不干净）</li>
+<li>合同审查同一份合同重新审查时FastGPT会带上上次审查的历史（chatId相同），如果希望每次审查完全无记忆需加时间戳</li>
+<li>FastGPT后台”使用者”列全显示Owner（API Key属主），OpenAPI方式无法区分真实用户</li>
+</ul>
+
+      </div>
+
+    
+    
+    
+
+      <footer class="post-footer">
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/2026/09/13/%E5%A4%8D%E7%9B%98%E4%B8%8E%E7%AC%94%E8%AE%B0/%E7%AC%94%E8%AE%B0/day35%20%E6%B3%95%E5%AE%9DAI%E6%B3%95%E5%BE%8B%E5%8A%A9%E6%89%8B%E5%85%A8%E6%A0%88%E9%A1%B9%E7%9B%AE%E5%BC%80%E5%8F%91/" rel="prev" title="day35 法宝AI法律助手全栈项目开发">
+      <i class="fa fa-chevron-left"></i> day35 法宝AI法律助手全栈项目开发
+    </a></div>
+      <div class="post-nav-item">
+    <a href="/2026/09/15/%E5%A4%8D%E7%9B%98%E4%B8%8E%E7%AC%94%E8%AE%B0/%E7%AC%94%E8%AE%B0/day36%20%E7%A7%92%E6%9D%80%E5%AE%9E%E7%8E%B0%E4%B8%8E%E6%82%B2%E8%A7%82%E9%94%81%E8%A7%A3%E5%86%B3%E8%B6%85%E5%8D%96/" rel="next" title="day36 秒杀实现与悲观锁解决超卖">
+      day36 秒杀实现与悲观锁解决超卖 <i class="fa fa-chevron-right"></i>
+    </a></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+
+
+          </div>
+          
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#1-%E4%BB%8A%E5%A4%A9%E5%81%9A%E4%BA%86%E4%BB%80%E4%B9%88"><span class="nav-number">1.</span> <span class="nav-text">1. 今天做了什么</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#2-%E6%A0%B8%E5%BF%83%E7%9F%A5%E8%AF%86%E7%82%B9"><span class="nav-number">2.</span> <span class="nav-text">2. 核心知识点</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#3-%E6%B7%B1%E5%BA%A6%E6%80%9D%E8%80%83"><span class="nav-number">3.</span> <span class="nav-text">3. 深度思考</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#4-%E8%B8%A9%E8%BF%87%E7%9A%84%E5%9D%91"><span class="nav-number">4.</span> <span class="nav-text">4. 踩过的坑</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#5-%E9%81%97%E7%95%99%E9%97%AE%E9%A2%98-%E6%83%B3%E4%B8%8D%E9%80%9A"><span class="nav-number">5.</span> <span class="nav-text">5. 遗留问题 &#x2F; 想不通</span></a></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="ZHX"
+      src="/images/avatar.jpeg">
+  <p class="site-author-name" itemprop="name">ZHX</p>
+  <div class="site-description" itemprop="description">记录编程学习、项目实战和踩坑笔记</div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">50</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+            <a href="/categories/">
+          
+        <span class="site-state-item-count">10</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+  </nav>
+</div>
+
+
+
+      </div>
+        <div class="back-to-top motion-element">
+          <i class="fa fa-arrow-up"></i>
+          <span>0%</span>
+        </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2026</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">ZHX</span>
+</div>
+  <div class="powered-by">由 <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Gemini</a> 强力驱动
+  </div>
+
+        
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/pisces.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+
+</body>
+</html>

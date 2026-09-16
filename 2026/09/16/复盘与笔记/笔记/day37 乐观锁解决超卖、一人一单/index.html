@@ -1,0 +1,604 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 8.1.2">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/favicon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon.png">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/all.min.css">
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"www.blog-x.cc.cd","root":"/","scheme":"Gemini","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"always","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":false,"show_result":false,"style":null},"back2top":{"enable":true,"sidebar":true,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":false,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}}};
+  </script>
+
+  <meta name="description" content="day37 乐观锁解决超卖、一人一单与集群锁失效一、乐观锁解决超卖问题1.1 乐观锁思路乐观锁：认为线程安全问题小概率发生，不添加锁，让线程并行执行，提高效率。在更新时判断数据是否与之前查询到的一致，一致则更新。 与悲观锁的对比：    维度 悲观锁 乐观锁    核心思想 认为冲突一定会发生，先加锁再操作 认为冲突概率低，不加锁，更新时判断   并发性 串行执行，吞吐量低 并行执行，吞吐量高">
+<meta property="og:type" content="article">
+<meta property="og:title" content="day37 乐观锁解决超卖、一人一单">
+<meta property="og:url" content="https://www.blog-x.cc.cd/2026/09/16/%E5%A4%8D%E7%9B%98%E4%B8%8E%E7%AC%94%E8%AE%B0/%E7%AC%94%E8%AE%B0/day37%20%E4%B9%90%E8%A7%82%E9%94%81%E8%A7%A3%E5%86%B3%E8%B6%85%E5%8D%96%E3%80%81%E4%B8%80%E4%BA%BA%E4%B8%80%E5%8D%95/index.html">
+<meta property="og:site_name" content="我的学习日记">
+<meta property="og:description" content="day37 乐观锁解决超卖、一人一单与集群锁失效一、乐观锁解决超卖问题1.1 乐观锁思路乐观锁：认为线程安全问题小概率发生，不添加锁，让线程并行执行，提高效率。在更新时判断数据是否与之前查询到的一致，一致则更新。 与悲观锁的对比：    维度 悲观锁 乐观锁    核心思想 认为冲突一定会发生，先加锁再操作 认为冲突概率低，不加锁，更新时判断   并发性 串行执行，吞吐量低 并行执行，吞吐量高">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2026-09-16T14:28:30.000Z">
+<meta property="article:modified_time" content="2026-09-16T12:38:46.062Z">
+<meta property="article:author" content="ZHX">
+<meta name="twitter:card" content="summary">
+
+<link rel="canonical" href="https://www.blog-x.cc.cd/2026/09/16/%E5%A4%8D%E7%9B%98%E4%B8%8E%E7%AC%94%E8%AE%B0/%E7%AC%94%E8%AE%B0/day37%20%E4%B9%90%E8%A7%82%E9%94%81%E8%A7%A3%E5%86%B3%E8%B6%85%E5%8D%96%E3%80%81%E4%B8%80%E4%BA%BA%E4%B8%80%E5%8D%95/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'zh-CN'
+  };
+</script>
+
+  <title>day37 乐观锁解决超卖、一人一单 | 我的学习日记</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">我的学习日记</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="main-menu menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档<span class="badge">50</span></a>
+
+  </li>
+        <li class="menu-item menu-item-categories">
+
+    <a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分类<span class="badge">10</span></a>
+
+  </li>
+        <li class="menu-item menu-item-about">
+
+    <a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>关于</a>
+
+  </li>
+        <li class="menu-item menu-item-tags">
+
+    <a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签<span class="badge">0</span></a>
+
+  </li>
+  </ul>
+</nav>
+
+
+
+
+</div>
+    </header>
+
+    
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://www.blog-x.cc.cd/2026/09/16/%E5%A4%8D%E7%9B%98%E4%B8%8E%E7%AC%94%E8%AE%B0/%E7%AC%94%E8%AE%B0/day37%20%E4%B9%90%E8%A7%82%E9%94%81%E8%A7%A3%E5%86%B3%E8%B6%85%E5%8D%96%E3%80%81%E4%B8%80%E4%BA%BA%E4%B8%80%E5%8D%95/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.jpeg">
+      <meta itemprop="name" content="ZHX">
+      <meta itemprop="description" content="记录编程学习、项目实战和踩坑笔记">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="我的学习日记">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          day37 乐观锁解决超卖、一人一单
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+              
+
+              <time title="创建时间：2026-09-16 22:28:30 / 修改时间：20:38:46" itemprop="dateCreated datePublished" datetime="2026-09-16T22:28:30+08:00">2026-09-16</time>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+      <div class="post-body" itemprop="articleBody">
+
+        
+          <h1 id="day37-乐观锁解决超卖、一人一单与集群锁失效"><a href="#day37-乐观锁解决超卖、一人一单与集群锁失效" class="headerlink" title="day37 乐观锁解决超卖、一人一单与集群锁失效"></a>day37 乐观锁解决超卖、一人一单与集群锁失效</h1><h2 id="一、乐观锁解决超卖问题"><a href="#一、乐观锁解决超卖问题" class="headerlink" title="一、乐观锁解决超卖问题"></a>一、乐观锁解决超卖问题</h2><h3 id="1-1-乐观锁思路"><a href="#1-1-乐观锁思路" class="headerlink" title="1.1 乐观锁思路"></a>1.1 乐观锁思路</h3><p><strong>乐观锁</strong>：认为线程安全问题小概率发生，不添加锁，让线程并行执行，提高效率。在更新时判断数据是否与之前查询到的一致，一致则更新。</p>
+<p>与悲观锁的对比：</p>
+<table>
+<thead>
+<tr>
+<th>维度</th>
+<th>悲观锁</th>
+<th>乐观锁</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>核心思想</td>
+<td>认为冲突一定会发生，先加锁再操作</td>
+<td>认为冲突概率低，不加锁，更新时判断</td>
+</tr>
+<tr>
+<td>并发性</td>
+<td>串行执行，吞吐量低</td>
+<td>并行执行，吞吐量高</td>
+</tr>
+<tr>
+<td>适用场景</td>
+<td>写多读少，冲突概率高</td>
+<td>读多写少，冲突概率低</td>
+</tr>
+<tr>
+<td>本项目代表</td>
+<td><code>synchronized</code> + 编程式事务</td>
+<td><code>.gt(&quot;stock&quot;, 0)</code> 条件更新</td>
+</tr>
+</tbody></table>
+<h3 id="1-2-方案一：与旧值比较"><a href="#1-2-方案一：与旧值比较" class="headerlink" title="1.2 方案一：与旧值比较"></a>1.2 方案一：与旧值比较</h3><p>最初的乐观锁写法是用查询到的旧库存值作为条件：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">boolean</span> <span class="variable">success</span> <span class="operator">=</span> seckillVoucherService.update()</span><br><span class="line">        .setSql(<span class="string">&quot;stock=stock-1&quot;</span>)</span><br><span class="line">        .eq(<span class="string">&quot;voucher_id&quot;</span>, voucherId)</span><br><span class="line">        .eq(<span class="string">&quot;stock&quot;</span>, seckillVoucher.getStock()) <span class="comment">// WHERE stock = 旧库存值</span></span><br><span class="line">        .update();</span><br></pre></td></tr></table></figure>
+
+<p>等价 SQL：</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">UPDATE</span> tb_seckill_voucher</span><br><span class="line"><span class="keyword">SET</span> stock <span class="operator">=</span> stock <span class="operator">-</span> <span class="number">1</span></span><br><span class="line"><span class="keyword">WHERE</span> voucher_id <span class="operator">=</span> ? <span class="keyword">AND</span> stock <span class="operator">=</span> ?;</span><br></pre></td></tr></table></figure>
+
+<p><strong>问题</strong>：假设库存为 100，100 个线程同时查询到 stock&#x3D;100 并通过判断，但只有第一个线程更新成功（stock 变为 99），其余 99 个线程因为 <code>stock = 100</code> 条件不再匹配而全部失败。<strong>失败率极高，导致库存无法卖完。</strong></p>
+<h3 id="1-3-方案二：stock-0-条件更新"><a href="#1-3-方案二：stock-0-条件更新" class="headerlink" title="1.3 方案二：stock &gt; 0 条件更新"></a>1.3 方案二：stock &gt; 0 条件更新</h3><p>既然库存只要大于 0 就可以扣减，不需要精确匹配旧值，改为：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">boolean</span> <span class="variable">success</span> <span class="operator">=</span> seckillVoucherService.update()</span><br><span class="line">        .setSql(<span class="string">&quot;stock=stock-1&quot;</span>)</span><br><span class="line">        .eq(<span class="string">&quot;voucher_id&quot;</span>, voucherId)</span><br><span class="line">        .gt(<span class="string">&quot;stock&quot;</span>, <span class="number">0</span>) <span class="comment">// 只要 stock &gt; 0 即可</span></span><br><span class="line">        .update();</span><br></pre></td></tr></table></figure>
+
+<p>等价 SQL：</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">UPDATE</span> tb_seckill_voucher</span><br><span class="line"><span class="keyword">SET</span> stock <span class="operator">=</span> stock <span class="operator">-</span> <span class="number">1</span></span><br><span class="line"><span class="keyword">WHERE</span> voucher_id <span class="operator">=</span> ? <span class="keyword">AND</span> stock <span class="operator">&gt;</span> <span class="number">0</span>;</span><br></pre></td></tr></table></figure>
+
+<p>MySQL 的单行 UPDATE 是原子操作，且 InnoDB 会对被更新的行加行锁，修改同一行数据的操作会串行执行。加上 <code>stock &gt; 0</code> 条件，可以从根本上杜绝超卖。</p>
+<h3 id="1-4-gt-stock-0-是乐观锁吗"><a href="#1-4-gt-stock-0-是乐观锁吗" class="headerlink" title="1.4 .gt(&quot;stock&quot;, 0) 是乐观锁吗"></a>1.4 <code>.gt(&quot;stock&quot;, 0)</code> 是乐观锁吗</h3><p>这是随笔中的核心思考，结论如下：</p>
+<table>
+<thead>
+<tr>
+<th>写法</th>
+<th>是否乐观锁</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>.eq(&quot;stock&quot;, seckillVoucher.getStock())</code></td>
+<td>是</td>
+<td>比较旧数据，一致才更新，符合乐观锁思想</td>
+</tr>
+<tr>
+<td><code>.gt(&quot;stock&quot;, 0)</code></td>
+<td>否（业务变体）</td>
+<td>没有比较旧数据或版本号，只约束下限</td>
+</tr>
+</tbody></table>
+<blockquote>
+<p>注意：<code>.gt(&quot;stock&quot;, 0)</code> 不是经典乐观锁，也不是 MyBatis-Plus 的 <code>@Version</code> 版本号乐观锁。它是基于业务特点的<strong>数据库原子条件更新</strong>：利用 UPDATE 语句本身的原子性和 MySQL 行锁，在 WHERE 条件中约束 <code>stock &gt; 0</code>，防止扣减到负数。</p>
+<p>在悲观锁方案中，<code>.gt(&quot;stock&quot;, 0)</code> 的作用是<strong>兜底</strong>，防止锁失效后超卖。在乐观锁方案中，它作为<strong>主防超卖手段</strong>。两者的底层都依赖 MySQL 行锁机制。</p>
+</blockquote>
+<hr>
+<h2 id="二、一人一单"><a href="#二、一人一单" class="headerlink" title="二、一人一单"></a>二、一人一单</h2><h3 id="2-1-需求与问题"><a href="#2-1-需求与问题" class="headerlink" title="2.1 需求与问题"></a>2.1 需求与问题</h3><p><strong>需求</strong>：同一个秒杀券，一个用户只能下一单。</p>
+<p><strong>并发问题</strong>：在”查询用户是否已下单 → 判断 → 写入订单”这个流程中，如果同一用户高并发访问，在订单未保存之前，多个线程都可以通过”未下单”的判断，导致一人多单。</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">线程1：查询订单(count=0) → 判断未下单 → （还没写入）</span><br><span class="line">线程2：查询订单(count=0) → 判断未下单 → （还没写入）</span><br><span class="line">...</span><br><span class="line">多个线程都通过判断，各自写入订单 → 一人多单</span><br></pre></td></tr></table></figure>
+
+<h3 id="2-2-锁粒度选择"><a href="#2-2-锁粒度选择" class="headerlink" title="2.2 锁粒度选择"></a>2.2 锁粒度选择</h3><p>加锁的目的是防止同一用户并发下单，因此锁粒度应该精确到用户级别。</p>
+<table>
+<thead>
+<tr>
+<th>锁对象</th>
+<th>粒度</th>
+<th>问题</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>VoucherOrderServiceImpl.class</code></td>
+<td>类级别，所有请求串行</td>
+<td>不同用户也串行，吞吐量极差</td>
+</tr>
+<tr>
+<td><code>this</code></td>
+<td>实例级别</td>
+<td>同上，粒度太粗</td>
+</tr>
+<tr>
+<td><code>userId.toString().intern()</code></td>
+<td>用户级别</td>
+<td>同一用户串行，不同用户并行，粒度精确</td>
+</tr>
+</tbody></table>
+<h3 id="2-3-intern-方法"><a href="#2-3-intern-方法" class="headerlink" title="2.3 intern() 方法"></a>2.3 <code>intern()</code> 方法</h3><p><code>userId</code> 是 <code>Long</code> 类型，<code>userId.toString()</code> 每次调用会 <code>new</code> 一个新的 String 对象，不同线程拿到的是不同对象，无法互斥。必须使用 <code>intern()</code>：</p>
+<ul>
+<li>如果字符串常量池中已有该字符串，返回池中的引用</li>
+<li>如果没有，将当前字符串的引用放入池中，并返回</li>
+</ul>
+<p>这样内容相同的字符串经过 <code>intern()</code> 后返回的是同一个引用，保证同一用户加的是同一把锁。</p>
+<h3 id="2-4-锁与事务的顺序"><a href="#2-4-锁与事务的顺序" class="headerlink" title="2.4 锁与事务的顺序"></a>2.4 锁与事务的顺序</h3><p>与 day36 的教训一致：<strong>锁的释放必须晚于事务提交</strong>。</p>
+<p>如果锁在 <code>createVoucherOrder</code> 方法内部加（方法上有 <code>@Transactional</code>），则锁释放在方法内部，事务提交在方法返回后由代理完成，锁释放早于事务提交，其他线程在窗口期内能读到旧数据。</p>
+<p>因此正确做法是将锁放在 <code>seckillVoucher</code> 方法中，包裹整个 <code>createVoucherOrder</code> 调用。</p>
+<hr>
+<h2 id="三、AopContext-获取代理对象"><a href="#三、AopContext-获取代理对象" class="headerlink" title="三、AopContext 获取代理对象"></a>三、AopContext 获取代理对象</h2><h3 id="3-1-问题回顾"><a href="#3-1-问题回顾" class="headerlink" title="3.1 问题回顾"></a>3.1 问题回顾</h3><p>day36 的错误示范二：同一类中 <code>seckillVoucher</code> 调用 <code>this.doSeckillVoucher()</code>，因为 <code>this</code> 不是代理对象，<code>@Transactional</code> 不会生效。</p>
+<h3 id="3-2-解决方案：AopContext-currentProxy"><a href="#3-2-解决方案：AopContext-currentProxy" class="headerlink" title="3.2 解决方案：AopContext.currentProxy()"></a>3.2 解决方案：AopContext.currentProxy()</h3><p>通过 <code>AopContext.currentProxy()</code> 获取当前类的代理对象，再通过代理对象调用方法，使 <code>@Transactional</code> 生效：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@Override</span></span><br><span class="line"><span class="keyword">public</span> <span class="type">Result</span> <span class="title function_">seckillVoucher</span><span class="params">(Long voucherId)</span> &#123;</span><br><span class="line">    <span class="comment">// ... 前置校验（查询券、时间、库存） ...</span></span><br><span class="line">    <span class="type">Long</span> <span class="variable">userId</span> <span class="operator">=</span> UserHolder.getUser().getId();</span><br><span class="line">    <span class="keyword">synchronized</span> (userId.toString().intern()) &#123;</span><br><span class="line">        <span class="type">IVoucherOrderService</span> <span class="variable">proxy</span> <span class="operator">=</span> (IVoucherOrderService) AopContext.currentProxy();</span><br><span class="line">        <span class="keyword">return</span> proxy.createVoucherOrder(voucherId);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="meta">@Transactional</span></span><br><span class="line"><span class="keyword">public</span> <span class="type">Result</span> <span class="title function_">createVoucherOrder</span><span class="params">(Long voucherId)</span> &#123;</span><br><span class="line">    <span class="type">Long</span> <span class="variable">userId</span> <span class="operator">=</span> UserHolder.getUser().getId();</span><br><span class="line">    <span class="comment">// 一人一单查重</span></span><br><span class="line">    <span class="type">int</span> <span class="variable">count</span> <span class="operator">=</span> query().eq(<span class="string">&quot;user_id&quot;</span>, userId).eq(<span class="string">&quot;voucher_id&quot;</span>, voucherId).count();</span><br><span class="line">    <span class="keyword">if</span> (count &gt; <span class="number">0</span>) &#123;</span><br><span class="line">        <span class="keyword">return</span> Result.fail(<span class="string">&quot;用户已经购买过一次！&quot;</span>);</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="comment">// 乐观锁扣减库存</span></span><br><span class="line">    <span class="type">boolean</span> <span class="variable">success</span> <span class="operator">=</span> seckillVoucherService.update()</span><br><span class="line">            .setSql(<span class="string">&quot;stock=stock-1&quot;</span>)</span><br><span class="line">            .eq(<span class="string">&quot;voucher_id&quot;</span>, voucherId)</span><br><span class="line">            .gt(<span class="string">&quot;stock&quot;</span>, <span class="number">0</span>)</span><br><span class="line">            .update();</span><br><span class="line">    <span class="keyword">if</span> (!success) &#123;</span><br><span class="line">        <span class="keyword">return</span> Result.fail(<span class="string">&quot;库存不足！&quot;</span>);</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="comment">// 创建订单</span></span><br><span class="line">    <span class="type">VoucherOrder</span> <span class="variable">voucherOrder</span> <span class="operator">=</span> <span class="keyword">new</span> <span class="title class_">VoucherOrder</span>();</span><br><span class="line">    <span class="type">long</span> <span class="variable">orderId</span> <span class="operator">=</span> redisIdWorker.nextId(<span class="string">&quot;order&quot;</span>);</span><br><span class="line">    voucherOrder.setId(orderId);</span><br><span class="line">    voucherOrder.setUserId(userId);</span><br><span class="line">    voucherOrder.setVoucherId(voucherId);</span><br><span class="line">    save(voucherOrder);</span><br><span class="line">    <span class="keyword">return</span> Result.ok(orderId);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h3 id="3-3-使用前提"><a href="#3-3-使用前提" class="headerlink" title="3.3 使用前提"></a>3.3 使用前提</h3><p><code>AopContext.currentProxy()</code> 默认不可用，需要两个配置：</p>
+<ol>
+<li><strong>启动类添加注解</strong>：</li>
+</ol>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@EnableAspectJAutoProxy(exposeProxy = true)</span></span><br><span class="line"><span class="meta">@MapperScan(&quot;com.hmdp.mapper&quot;)</span></span><br><span class="line"><span class="meta">@SpringBootApplication</span></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">class</span> <span class="title class_">HmDianPingApplication</span> &#123;</span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">static</span> <span class="type">void</span> <span class="title function_">main</span><span class="params">(String[] args)</span> &#123;</span><br><span class="line">        SpringApplication.run(HmDianPingApplication.class, args);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p><code>exposeProxy = true</code> 将当前代理对象放入线程上下文，<code>AopContext.currentProxy()</code> 才能从中取出。默认为 <code>false</code>，不开启会抛出 <code>IllegalStateException: Cannot find current proxy</code>。</p>
+<ol start="2">
+<li><strong>引入依赖</strong>：</li>
+</ol>
+<figure class="highlight xml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">dependency</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">groupId</span>&gt;</span>org.aspectj<span class="tag">&lt;/<span class="name">groupId</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">artifactId</span>&gt;</span>aspectjweaver<span class="tag">&lt;/<span class="name">artifactId</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">dependency</span>&gt;</span></span><br></pre></td></tr></table></figure>
+
+<ol start="3">
+<li><strong>接口声明</strong>：<code>createVoucherOrder</code> 方法必须在 <code>IVoucherOrderService</code> 接口中声明，代理对象才能拦截到该方法。</li>
+</ol>
+<h3 id="3-4-同类调用-Transactional-失效的方案对比"><a href="#3-4-同类调用-Transactional-失效的方案对比" class="headerlink" title="3.4 同类调用 @Transactional 失效的方案对比"></a>3.4 同类调用 @Transactional 失效的方案对比</h3><table>
+<thead>
+<tr>
+<th>方案</th>
+<th>做法</th>
+<th>优缺点</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>编程式事务</td>
+<td><code>TransactionTemplate.execute()</code></td>
+<td>灵活，无代理依赖，代码侵入性高</td>
+</tr>
+<tr>
+<td>AopContext 代理</td>
+<td><code>AopContext.currentProxy()</code></td>
+<td>保留声明式事务，需配置 <code>exposeProxy</code></td>
+</tr>
+<tr>
+<td>注入自身代理</td>
+<td><code>@Autowired</code> 自身接口</td>
+<td>有循环依赖风险</td>
+</tr>
+<tr>
+<td>拆分 Service</td>
+<td>将方法移到另一个 Service 类</td>
+<td>结构清晰，但增加类数量</td>
+</tr>
+</tbody></table>
+<p>本项目在 day36 使用了编程式事务，day37 改用 AopContext 方案，两种都可以解决同类调用事务失效问题。</p>
+<hr>
+<h2 id="四、集群模式下-synchronized-锁失效"><a href="#四、集群模式下-synchronized-锁失效" class="headerlink" title="四、集群模式下 synchronized 锁失效"></a>四、集群模式下 synchronized 锁失效</h2><h3 id="4-1-问题现象"><a href="#4-1-问题现象" class="headerlink" title="4.1 问题现象"></a>4.1 问题现象</h3><p>经过测试，在集群模式（多实例部署）下，<code>synchronized</code> 锁会失效，仍会出现一人多单。</p>
+<h3 id="4-2-根本原因"><a href="#4-2-根本原因" class="headerlink" title="4.2 根本原因"></a>4.2 根本原因</h3><figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">服务器A (JVM-1)                    服务器B (JVM-2)</span><br><span class="line">┌─────────────────────┐           ┌─────────────────────┐</span><br><span class="line">│ VoucherOrderServiceImpl │       │ VoucherOrderServiceImpl │</span><br><span class="line">│   .class → 对象A      │       │   .class → 对象B      │</span><br><span class="line">│ userId.intern() → 池A │       │ userId.intern() → 池B │</span><br><span class="line">│ synchronized(池A)     │       │ synchronized(池B)     │</span><br><span class="line">└─────────────────────┘           └─────────────────────┘</span><br><span class="line">        ↓                                 ↓</span><br><span class="line">   两把不同的锁，互不感知</span><br></pre></td></tr></table></figure>
+
+<p><code>synchronized</code> 是 <strong>JVM 进程内锁</strong>。集群模式下每个服务器有独立的 JVM，字符串常量池也是各自的，锁对象互不感知，不同服务器的线程可以同时进入临界区。</p>
+<h3 id="4-3-解决方向"><a href="#4-3-解决方向" class="headerlink" title="4.3 解决方向"></a>4.3 解决方向</h3><p>单机方案无法满足集群需求，需要<strong>跨进程的分布式锁</strong>，后续使用 Redis 分布式锁解决。</p>
+<blockquote>
+<p>注意：当前基于 <code>synchronized</code> 的一人一单方案<strong>仅限单机单实例部署</strong>。生产环境的集群部署必须替换为 Redis 分布式锁。</p>
+</blockquote>
+<hr>
+<h2 id="今日总结"><a href="#今日总结" class="headerlink" title="今日总结"></a>今日总结</h2><table>
+<thead>
+<tr>
+<th>模块</th>
+<th>核心要点</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>乐观锁方案一</td>
+<td><code>.eq(&quot;stock&quot;, 旧库存值)</code> 比较旧数据，失败率高，库存无法卖完</td>
+</tr>
+<tr>
+<td>乐观锁方案二</td>
+<td><code>.gt(&quot;stock&quot;, 0)</code> 只约束下限，利用 MySQL 行锁原子更新防超卖</td>
+</tr>
+<tr>
+<td><code>.gt(&quot;stock&quot;, 0)</code> 定性</td>
+<td>不是经典乐观锁&#x2F;CAS，是基于业务的数据库原子条件更新；悲观锁中作兜底</td>
+</tr>
+<tr>
+<td>一人一单</td>
+<td>查重 + 加锁，锁粒度精确到 userId，用 <code>intern()</code> 保证同一用户同一把锁</td>
+</tr>
+<tr>
+<td><code>intern()</code></td>
+<td>字符串常量池机制，内容相同的字符串返回同一引用，保证锁对象一致</td>
+</tr>
+<tr>
+<td>AopContext 方案</td>
+<td><code>AopContext.currentProxy()</code> 获取代理对象，解决同类调用 <code>@Transactional</code> 失效；需 <code>exposeProxy = true</code> + <code>aspectjweaver</code> 依赖</td>
+</tr>
+<tr>
+<td>锁与事务顺序</td>
+<td>锁必须包裹整个事务方法调用，确保事务提交后才释放锁</td>
+</tr>
+<tr>
+<td>集群锁失效</td>
+<td><code>synchronized</code> 是 JVM 内锁，集群多实例各自独立 JVM，锁互不感知，需 Redis 分布式锁</td>
+</tr>
+</tbody></table>
+
+      </div>
+
+    
+    
+    
+
+      <footer class="post-footer">
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/2026/09/15/%E5%A4%8D%E7%9B%98%E4%B8%8E%E7%AC%94%E8%AE%B0/%E5%A4%8D%E7%9B%98/day36%20%E7%A7%92%E6%9D%80%E5%AE%9E%E7%8E%B0,%E6%82%B2%E8%A7%82%E9%94%81%E8%A7%A3%E5%86%B3%E8%B6%85%E5%8D%96/" rel="prev" title="day36 秒杀实现与悲观锁解决超卖">
+      <i class="fa fa-chevron-left"></i> day36 秒杀实现与悲观锁解决超卖
+    </a></div>
+      <div class="post-nav-item">
+    <a href="/2026/09/16/%E5%A4%8D%E7%9B%98%E4%B8%8E%E7%AC%94%E8%AE%B0/%E5%A4%8D%E7%9B%98/day37%20%E4%B9%90%E8%A7%82%E9%94%81%E8%A7%A3%E5%86%B3%E8%B6%85%E5%8D%96%E3%80%81%E4%B8%80%E4%BA%BA%E4%B8%80%E5%8D%95/" rel="next" title="day37 乐观锁解决超卖、一人一单">
+      day37 乐观锁解决超卖、一人一单 <i class="fa fa-chevron-right"></i>
+    </a></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+
+
+          </div>
+          
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#day37-%E4%B9%90%E8%A7%82%E9%94%81%E8%A7%A3%E5%86%B3%E8%B6%85%E5%8D%96%E3%80%81%E4%B8%80%E4%BA%BA%E4%B8%80%E5%8D%95%E4%B8%8E%E9%9B%86%E7%BE%A4%E9%94%81%E5%A4%B1%E6%95%88"><span class="nav-number">1.</span> <span class="nav-text">day37 乐观锁解决超卖、一人一单与集群锁失效</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%80%E3%80%81%E4%B9%90%E8%A7%82%E9%94%81%E8%A7%A3%E5%86%B3%E8%B6%85%E5%8D%96%E9%97%AE%E9%A2%98"><span class="nav-number">1.1.</span> <span class="nav-text">一、乐观锁解决超卖问题</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#1-1-%E4%B9%90%E8%A7%82%E9%94%81%E6%80%9D%E8%B7%AF"><span class="nav-number">1.1.1.</span> <span class="nav-text">1.1 乐观锁思路</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#1-2-%E6%96%B9%E6%A1%88%E4%B8%80%EF%BC%9A%E4%B8%8E%E6%97%A7%E5%80%BC%E6%AF%94%E8%BE%83"><span class="nav-number">1.1.2.</span> <span class="nav-text">1.2 方案一：与旧值比较</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#1-3-%E6%96%B9%E6%A1%88%E4%BA%8C%EF%BC%9Astock-0-%E6%9D%A1%E4%BB%B6%E6%9B%B4%E6%96%B0"><span class="nav-number">1.1.3.</span> <span class="nav-text">1.3 方案二：stock &gt; 0 条件更新</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#1-4-gt-stock-0-%E6%98%AF%E4%B9%90%E8%A7%82%E9%94%81%E5%90%97"><span class="nav-number">1.1.4.</span> <span class="nav-text">1.4 .gt(&quot;stock&quot;, 0) 是乐观锁吗</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BA%8C%E3%80%81%E4%B8%80%E4%BA%BA%E4%B8%80%E5%8D%95"><span class="nav-number">1.2.</span> <span class="nav-text">二、一人一单</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#2-1-%E9%9C%80%E6%B1%82%E4%B8%8E%E9%97%AE%E9%A2%98"><span class="nav-number">1.2.1.</span> <span class="nav-text">2.1 需求与问题</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2-2-%E9%94%81%E7%B2%92%E5%BA%A6%E9%80%89%E6%8B%A9"><span class="nav-number">1.2.2.</span> <span class="nav-text">2.2 锁粒度选择</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2-3-intern-%E6%96%B9%E6%B3%95"><span class="nav-number">1.2.3.</span> <span class="nav-text">2.3 intern() 方法</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2-4-%E9%94%81%E4%B8%8E%E4%BA%8B%E5%8A%A1%E7%9A%84%E9%A1%BA%E5%BA%8F"><span class="nav-number">1.2.4.</span> <span class="nav-text">2.4 锁与事务的顺序</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%89%E3%80%81AopContext-%E8%8E%B7%E5%8F%96%E4%BB%A3%E7%90%86%E5%AF%B9%E8%B1%A1"><span class="nav-number">1.3.</span> <span class="nav-text">三、AopContext 获取代理对象</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#3-1-%E9%97%AE%E9%A2%98%E5%9B%9E%E9%A1%BE"><span class="nav-number">1.3.1.</span> <span class="nav-text">3.1 问题回顾</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#3-2-%E8%A7%A3%E5%86%B3%E6%96%B9%E6%A1%88%EF%BC%9AAopContext-currentProxy"><span class="nav-number">1.3.2.</span> <span class="nav-text">3.2 解决方案：AopContext.currentProxy()</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#3-3-%E4%BD%BF%E7%94%A8%E5%89%8D%E6%8F%90"><span class="nav-number">1.3.3.</span> <span class="nav-text">3.3 使用前提</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#3-4-%E5%90%8C%E7%B1%BB%E8%B0%83%E7%94%A8-Transactional-%E5%A4%B1%E6%95%88%E7%9A%84%E6%96%B9%E6%A1%88%E5%AF%B9%E6%AF%94"><span class="nav-number">1.3.4.</span> <span class="nav-text">3.4 同类调用 @Transactional 失效的方案对比</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%9B%9B%E3%80%81%E9%9B%86%E7%BE%A4%E6%A8%A1%E5%BC%8F%E4%B8%8B-synchronized-%E9%94%81%E5%A4%B1%E6%95%88"><span class="nav-number">1.4.</span> <span class="nav-text">四、集群模式下 synchronized 锁失效</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#4-1-%E9%97%AE%E9%A2%98%E7%8E%B0%E8%B1%A1"><span class="nav-number">1.4.1.</span> <span class="nav-text">4.1 问题现象</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#4-2-%E6%A0%B9%E6%9C%AC%E5%8E%9F%E5%9B%A0"><span class="nav-number">1.4.2.</span> <span class="nav-text">4.2 根本原因</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#4-3-%E8%A7%A3%E5%86%B3%E6%96%B9%E5%90%91"><span class="nav-number">1.4.3.</span> <span class="nav-text">4.3 解决方向</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BB%8A%E6%97%A5%E6%80%BB%E7%BB%93"><span class="nav-number">1.5.</span> <span class="nav-text">今日总结</span></a></li></ol></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="ZHX"
+      src="/images/avatar.jpeg">
+  <p class="site-author-name" itemprop="name">ZHX</p>
+  <div class="site-description" itemprop="description">记录编程学习、项目实战和踩坑笔记</div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">50</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+            <a href="/categories/">
+          
+        <span class="site-state-item-count">10</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+  </nav>
+</div>
+
+
+
+      </div>
+        <div class="back-to-top motion-element">
+          <i class="fa fa-arrow-up"></i>
+          <span>0%</span>
+        </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2026</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">ZHX</span>
+</div>
+  <div class="powered-by">由 <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Gemini</a> 强力驱动
+  </div>
+
+        
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/pisces.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+
+</body>
+</html>
