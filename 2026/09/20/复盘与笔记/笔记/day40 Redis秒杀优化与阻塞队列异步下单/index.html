@@ -1,0 +1,608 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 8.1.2">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/favicon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon.png">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/all.min.css">
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"www.blog-x.cc.cd","root":"/","scheme":"Gemini","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"always","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":false,"show_result":false,"style":null},"back2top":{"enable":true,"sidebar":true,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":false,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}}};
+  </script>
+
+  <meta name="description" content="day40 Redis秒杀优化与阻塞队列异步下单一、原秒杀业务的问题分析优化前的秒杀下单流程中，一次请求需要完成以下全部操作后才返回订单 id： 1234567891011查询优惠券    ↓判断秒杀库存是否充足    ↓查询订单（校验一人一单）    ↓扣减库存    ↓创建订单    ↓返回订单 id  其中涉及 2 次数据库查询和 2 次数据库修改，且所有操作串行执行。数据库 IO 耗时较高">
+<meta property="og:type" content="article">
+<meta property="og:title" content="day40 Redis秒杀优化与阻塞队列异步下单">
+<meta property="og:url" content="https://www.blog-x.cc.cd/2026/09/20/%E5%A4%8D%E7%9B%98%E4%B8%8E%E7%AC%94%E8%AE%B0/%E7%AC%94%E8%AE%B0/day40%20Redis%E7%A7%92%E6%9D%80%E4%BC%98%E5%8C%96%E4%B8%8E%E9%98%BB%E5%A1%9E%E9%98%9F%E5%88%97%E5%BC%82%E6%AD%A5%E4%B8%8B%E5%8D%95/index.html">
+<meta property="og:site_name" content="我的学习日记">
+<meta property="og:description" content="day40 Redis秒杀优化与阻塞队列异步下单一、原秒杀业务的问题分析优化前的秒杀下单流程中，一次请求需要完成以下全部操作后才返回订单 id： 1234567891011查询优惠券    ↓判断秒杀库存是否充足    ↓查询订单（校验一人一单）    ↓扣减库存    ↓创建订单    ↓返回订单 id  其中涉及 2 次数据库查询和 2 次数据库修改，且所有操作串行执行。数据库 IO 耗时较高">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://www.blog-x.cc.cd/assets/Pasted%20image%2020260920142257.png">
+<meta property="og:image" content="https://www.blog-x.cc.cd/assets/Pasted%20image%2020260920142844.png">
+<meta property="og:image" content="https://www.blog-x.cc.cd/assets/Pasted%20image%2020260920143103.png">
+<meta property="article:published_time" content="2026-09-20T13:46:00.000Z">
+<meta property="article:modified_time" content="2026-09-20T13:53:00.840Z">
+<meta property="article:author" content="ZHX">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://www.blog-x.cc.cd/assets/Pasted%20image%2020260920142257.png">
+
+<link rel="canonical" href="https://www.blog-x.cc.cd/2026/09/20/%E5%A4%8D%E7%9B%98%E4%B8%8E%E7%AC%94%E8%AE%B0/%E7%AC%94%E8%AE%B0/day40%20Redis%E7%A7%92%E6%9D%80%E4%BC%98%E5%8C%96%E4%B8%8E%E9%98%BB%E5%A1%9E%E9%98%9F%E5%88%97%E5%BC%82%E6%AD%A5%E4%B8%8B%E5%8D%95/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'zh-CN'
+  };
+</script>
+
+  <title>day40 Redis秒杀优化与阻塞队列异步下单 | 我的学习日记</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">我的学习日记</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="main-menu menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档<span class="badge">56</span></a>
+
+  </li>
+        <li class="menu-item menu-item-categories">
+
+    <a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分类<span class="badge">10</span></a>
+
+  </li>
+        <li class="menu-item menu-item-about">
+
+    <a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>关于</a>
+
+  </li>
+        <li class="menu-item menu-item-tags">
+
+    <a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签<span class="badge">0</span></a>
+
+  </li>
+  </ul>
+</nav>
+
+
+
+
+</div>
+    </header>
+
+    
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://www.blog-x.cc.cd/2026/09/20/%E5%A4%8D%E7%9B%98%E4%B8%8E%E7%AC%94%E8%AE%B0/%E7%AC%94%E8%AE%B0/day40%20Redis%E7%A7%92%E6%9D%80%E4%BC%98%E5%8C%96%E4%B8%8E%E9%98%BB%E5%A1%9E%E9%98%9F%E5%88%97%E5%BC%82%E6%AD%A5%E4%B8%8B%E5%8D%95/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.jpeg">
+      <meta itemprop="name" content="ZHX">
+      <meta itemprop="description" content="记录编程学习、项目实战和踩坑笔记">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="我的学习日记">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          day40 Redis秒杀优化与阻塞队列异步下单
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+              
+
+              <time title="创建时间：2026-09-20 21:46:00 / 修改时间：21:53:00" itemprop="dateCreated datePublished" datetime="2026-09-20T21:46:00+08:00">2026-09-20</time>
+            </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E7%AC%94%E8%AE%B0/" itemprop="url" rel="index"><span itemprop="name">笔记</span></a>
+                </span>
+                  ，
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E7%AC%94%E8%AE%B0/Redis/" itemprop="url" rel="index"><span itemprop="name">Redis</span></a>
+                </span>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+      <div class="post-body" itemprop="articleBody">
+
+        
+          <h1 id="day40-Redis秒杀优化与阻塞队列异步下单"><a href="#day40-Redis秒杀优化与阻塞队列异步下单" class="headerlink" title="day40 Redis秒杀优化与阻塞队列异步下单"></a>day40 Redis秒杀优化与阻塞队列异步下单</h1><h2 id="一、原秒杀业务的问题分析"><a href="#一、原秒杀业务的问题分析" class="headerlink" title="一、原秒杀业务的问题分析"></a>一、原秒杀业务的问题分析</h2><p>优化前的秒杀下单流程中，一次请求需要完成以下全部操作后才返回订单 id：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">查询优惠券</span><br><span class="line">    ↓</span><br><span class="line">判断秒杀库存是否充足</span><br><span class="line">    ↓</span><br><span class="line">查询订单（校验一人一单）</span><br><span class="line">    ↓</span><br><span class="line">扣减库存</span><br><span class="line">    ↓</span><br><span class="line">创建订单</span><br><span class="line">    ↓</span><br><span class="line">返回订单 id</span><br></pre></td></tr></table></figure>
+
+<p>其中涉及 2 次数据库查询和 2 次数据库修改，且所有操作串行执行。数据库 IO 耗时较高，用户必须等待全部操作完成才能拿到响应，吞吐量受限。</p>
+<p><img src="/./assets/Pasted%20image%2020260920142257.png"></p>
+<p>图中红色标记的”判断秒杀库存”和”校验一人一单”是判断逻辑，本身不产生订单数据，但每次都要查库，是主要耗时点。</p>
+<h2 id="二、优化整体思路"><a href="#二、优化整体思路" class="headerlink" title="二、优化整体思路"></a>二、优化整体思路</h2><h3 id="2-1-核心方案"><a href="#2-1-核心方案" class="headerlink" title="2.1 核心方案"></a>2.1 核心方案</h3><p>将耗时短的判断逻辑前移到 Redis 中执行，判断通过后立即返回订单 id，实际下单操作异步执行：</p>
+<ol>
+<li>新增秒杀券时，将库存缓存到 Redis，并用 Set 维护已下单用户</li>
+<li>使用 Lua 脚本原子执行库存判断与一人一单检查</li>
+<li>判断通过后，生成订单 id 并立即返回给用户</li>
+<li>将订单信息放入阻塞队列</li>
+<li>异步线程从队列取订单，完成数据库扣减库存和保存订单</li>
+</ol>
+<p><img src="/./assets/Pasted%20image%2020260920142844.png"></p>
+<p>图中左侧红色框为 Redis 预判断阶段，中间为阻塞队列，右侧为异步执行的数据库操作。用户请求只需完成左侧判断即可返回，不必等待右侧全部执行完毕。</p>
+<h3 id="2-2-优化前后对比"><a href="#2-2-优化前后对比" class="headerlink" title="2.2 优化前后对比"></a>2.2 优化前后对比</h3><table>
+<thead>
+<tr>
+<th>对比项</th>
+<th>优化前</th>
+<th>优化后</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>库存判断</td>
+<td>查数据库</td>
+<td>读 Redis</td>
+</tr>
+<tr>
+<td>一人一单判断</td>
+<td>查数据库</td>
+<td>Redis Set <code>SISMEMBER</code></td>
+</tr>
+<tr>
+<td>判断与扣减是否原子</td>
+<td>否，需加锁</td>
+<td>Lua 脚本原子执行</td>
+</tr>
+<tr>
+<td>用户响应时机</td>
+<td>全部操作完成后</td>
+<td>判断通过后立即返回</td>
+</tr>
+<tr>
+<td>下单操作</td>
+<td>同步串行</td>
+<td>异步线程从阻塞队列消费</td>
+</tr>
+</tbody></table>
+<h2 id="三、Redis-缓存秒杀库存"><a href="#三、Redis-缓存秒杀库存" class="headerlink" title="三、Redis 缓存秒杀库存"></a>三、Redis 缓存秒杀库存</h2><h3 id="3-1-缓存时机"><a href="#3-1-缓存时机" class="headerlink" title="3.1 缓存时机"></a>3.1 缓存时机</h3><p>在新增秒杀券时，将库存写入 Redis。项目实现在 <code>VoucherServiceImpl.addSeckillVoucher</code> 中：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@Override</span></span><br><span class="line"><span class="meta">@Transactional</span></span><br><span class="line"><span class="keyword">public</span> <span class="type">void</span> <span class="title function_">addSeckillVoucher</span><span class="params">(Voucher voucher)</span> &#123;</span><br><span class="line">    save(voucher);</span><br><span class="line">    <span class="type">SeckillVoucher</span> <span class="variable">seckillVoucher</span> <span class="operator">=</span> <span class="keyword">new</span> <span class="title class_">SeckillVoucher</span>();</span><br><span class="line">    seckillVoucher.setVoucherId(voucher.getId());</span><br><span class="line">    seckillVoucher.setStock(voucher.getStock());</span><br><span class="line">    seckillVoucher.setBeginTime(voucher.getBeginTime());</span><br><span class="line">    seckillVoucher.setEndTime(voucher.getEndTime());</span><br><span class="line">    seckillVoucherService.save(seckillVoucher);</span><br><span class="line">    <span class="comment">// 将库存缓存到 Redis</span></span><br><span class="line">    stringRedisTemplate.opsForValue().set(</span><br><span class="line">            SECKILL_STOCK_KEY + voucher.getId(), voucher.getStock().toString());</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p><code>SECKILL_STOCK_KEY</code> 的值为 <code>&quot;seckill:stock:&quot;</code>，因此 Redis 中的库存 key 格式为 <code>seckill:stock:{voucherId}</code>，value 为库存数量的字符串。</p>
+<h3 id="3-2-Redis-数据结构"><a href="#3-2-Redis-数据结构" class="headerlink" title="3.2 Redis 数据结构"></a>3.2 Redis 数据结构</h3><table>
+<thead>
+<tr>
+<th>用途</th>
+<th>数据结构</th>
+<th>key 格式</th>
+<th>value</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>优惠券库存</td>
+<td>String</td>
+<td><code>seckill:stock:{voucherId}</code></td>
+<td>库存数量</td>
+</tr>
+<tr>
+<td>已下单用户</td>
+<td>Set</td>
+<td><code>seckill:order:{voucherId}</code></td>
+<td>已下单的 userId 集合</td>
+</tr>
+</tbody></table>
+<p>库存使用 String 类型，通过 <code>DECR</code> 原子扣减；已下单用户使用 Set 类型，通过 <code>SISMEMBER</code> 判断是否重复下单、<code>SADD</code> 记录下单用户。</p>
+<blockquote>
+<p><strong>注意</strong>：当前方案将库存存为 String，未在 Redis 中保存秒杀时间信息，因此 Lua 脚本无法校验秒杀时间。</p>
+</blockquote>
+<h2 id="四、Lua-脚本原子判断"><a href="#四、Lua-脚本原子判断" class="headerlink" title="四、Lua 脚本原子判断"></a>四、Lua 脚本原子判断</h2><h3 id="4-1-脚本内容"><a href="#4-1-脚本内容" class="headerlink" title="4.1 脚本内容"></a>4.1 脚本内容</h3><p>项目中的 Lua 脚本位于 <code>resources/seckill.lua</code>，由 <code>DefaultRedisScript</code> 加载：</p>
+<figure class="highlight lua"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">-- 优惠券id</span></span><br><span class="line"><span class="keyword">local</span> voucherId = ARGV[<span class="number">1</span>]</span><br><span class="line"><span class="comment">-- 用户id</span></span><br><span class="line"><span class="keyword">local</span> userId = ARGV[<span class="number">2</span>]</span><br><span class="line"></span><br><span class="line"><span class="comment">-- 库存key</span></span><br><span class="line"><span class="keyword">local</span> stockKey = <span class="string">&#x27;seckill:stock:&#x27;</span> .. voucherId</span><br><span class="line"><span class="comment">-- 订单key</span></span><br><span class="line"><span class="keyword">local</span> orderKey = <span class="string">&#x27;seckill:order:&#x27;</span> .. voucherId</span><br><span class="line"></span><br><span class="line"><span class="comment">-- 查库存,如果库存不足,则返回1</span></span><br><span class="line"><span class="keyword">if</span>(<span class="built_in">tonumber</span>(redis.call(<span class="string">&quot;get&quot;</span>, stockKey)) &lt; <span class="number">1</span>) <span class="keyword">then</span></span><br><span class="line">    <span class="keyword">return</span> <span class="number">1</span></span><br><span class="line"><span class="keyword">end</span></span><br><span class="line"></span><br><span class="line"><span class="comment">-- 一人一单,如果用户已下单,则返回2</span></span><br><span class="line"><span class="keyword">if</span>(redis.call(<span class="string">&quot;SISMEMBER&quot;</span>, orderKey, userId) == <span class="number">1</span>) <span class="keyword">then</span></span><br><span class="line">    <span class="keyword">return</span> <span class="number">2</span></span><br><span class="line"><span class="keyword">end</span></span><br><span class="line"></span><br><span class="line"><span class="comment">-- 减库存</span></span><br><span class="line">redis.call(<span class="string">&quot;DECR&quot;</span>, stockKey)</span><br><span class="line"></span><br><span class="line"><span class="comment">-- 下单</span></span><br><span class="line">redis.call(<span class="string">&quot;SADD&quot;</span>, orderKey, userId)</span><br><span class="line"></span><br><span class="line"><span class="comment">-- 返回0</span></span><br><span class="line"><span class="keyword">return</span> <span class="number">0</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="4-2-返回值含义"><a href="#4-2-返回值含义" class="headerlink" title="4.2 返回值含义"></a>4.2 返回值含义</h3><table>
+<thead>
+<tr>
+<th>返回值</th>
+<th>含义</th>
+<th>前端提示</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>0</td>
+<td>库存充足且未重复下单，抢购成功</td>
+<td>返回订单 id</td>
+</tr>
+<tr>
+<td>1</td>
+<td>库存不足</td>
+<td>库存不足</td>
+</tr>
+<tr>
+<td>2</td>
+<td>用户已下过单</td>
+<td>不允许重复下单</td>
+</tr>
+</tbody></table>
+<p>Java 侧通过 <code>stringRedisTemplate.execute</code> 执行脚本，<code>KEYS</code> 传空列表，<code>ARGV</code> 传 <code>voucherId</code> 和 <code>userId</code>：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">Long</span> <span class="variable">result</span> <span class="operator">=</span> stringRedisTemplate.execute(</span><br><span class="line">        SECKILL_SCRIPT,</span><br><span class="line">        Collections.emptyList(),</span><br><span class="line">        voucherId.toString(), userId.toString()</span><br><span class="line">);</span><br></pre></td></tr></table></figure>
+
+<h3 id="4-3-为什么后续不需要加锁"><a href="#4-3-为什么后续不需要加锁" class="headerlink" title="4.3 为什么后续不需要加锁"></a>4.3 为什么后续不需要加锁</h3><p>Lua 脚本在 Redis 中以原子方式执行”判断库存 → 判断一人一单 → 扣减库存 → 记录用户”这四步，中间不会被其他命令插入。加上 Redis 本身是单线程执行命令的，因此不存在并发安全问题。</p>
+<p>这意味着后续异步线程执行数据库扣减库存和保存订单时，不需要再判断一人一单，也不需要加分布式锁。项目中的 <code>createVoucherOrder</code> 方法因此省略了旧版本中的 <code>query().eq(&quot;user_id&quot;, userId).count()</code> 查询。</p>
+<h3 id="4-4-执行流程"><a href="#4-4-执行流程" class="headerlink" title="4.4 执行流程"></a>4.4 执行流程</h3><p><img src="/./assets/Pasted%20image%2020260920143103.png"></p>
+<p>图中左侧为 Lua 脚本内部判断流程，右侧为 Java 侧的整体调用流程：执行脚本 → 判断返回值 → 存入阻塞队列 → 返回订单 id → 异步下单。</p>
+<h2 id="五、阻塞队列与异步下单"><a href="#五、阻塞队列与异步下单" class="headerlink" title="五、阻塞队列与异步下单"></a>五、阻塞队列与异步下单</h2><h3 id="5-1-阻塞队列"><a href="#5-1-阻塞队列" class="headerlink" title="5.1 阻塞队列"></a>5.1 阻塞队列</h3><p>阻塞队列（<code>BlockingQueue</code>）是一种支持阻塞操作的队列：当队列为空时，<code>take()</code> 方法会阻塞等待，直到有元素入队才返回。项目使用 <code>ArrayBlockingQueue</code>：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">BlockingQueue</span>&lt;VoucherOrder&gt; <span class="variable">orderTasks</span> <span class="operator">=</span> <span class="keyword">new</span> <span class="title class_">ArrayBlockingQueue</span>&lt;&gt;(<span class="number">1024</span> * <span class="number">1024</span>);</span><br></pre></td></tr></table></figure>
+
+<p>容量设为 <code>1024 * 1024</code>（约 100 万），存储在 JVM 内存中。主线程将订单放入队列，异步线程从队列取出处理，实现生产者-消费者解耦。</p>
+<h3 id="5-2-异步下单实现"><a href="#5-2-异步下单实现" class="headerlink" title="5.2 异步下单实现"></a>5.2 异步下单实现</h3><p><strong>初始化异步线程</strong>：使用 <code>@PostConstruct</code> 在 Bean 创建后立即提交异步任务，单线程池持续从队列消费订单：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">private</span> <span class="keyword">static</span> <span class="keyword">final</span> <span class="type">ExecutorService</span> <span class="variable">executorService</span> <span class="operator">=</span> Executors.newSingleThreadExecutor();</span><br><span class="line"></span><br><span class="line"><span class="meta">@PostConstruct</span></span><br><span class="line"><span class="keyword">private</span> <span class="type">void</span> <span class="title function_">init</span><span class="params">()</span> &#123;</span><br><span class="line">    executorService.submit(<span class="keyword">new</span> <span class="title class_">VoucherOrderHandler</span>());</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p><code>@PostConstruct</code> 标注的方法在 Bean 完成依赖注入后自动执行一次，适合做初始化。<code>VoucherOrderHandler</code> 是内部类，实现了 <code>Runnable</code>，在 <code>while(true)</code> 循环中通过 <code>take()</code> 阻塞获取订单：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">private</span> <span class="keyword">class</span> <span class="title class_">VoucherOrderHandler</span> <span class="keyword">implements</span> <span class="title class_">Runnable</span> &#123;</span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="keyword">public</span> <span class="type">void</span> <span class="title function_">run</span><span class="params">()</span> &#123;</span><br><span class="line">        <span class="keyword">while</span> (<span class="literal">true</span>) &#123;</span><br><span class="line">            <span class="keyword">try</span> &#123;</span><br><span class="line">                <span class="type">VoucherOrder</span> <span class="variable">voucherOrder</span> <span class="operator">=</span> orderTasks.take();</span><br><span class="line">                iVoucherOrderService.createVoucherOrder(voucherOrder);</span><br><span class="line">            &#125; <span class="keyword">catch</span> (InterruptedException e) &#123;</span><br><span class="line">                log.error(<span class="string">&quot;从阻塞队列中获取订单异常&quot;</span>, e);</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p><strong>主线程下单入口</strong>：<code>seckillVoucher</code> 方法在主线程（Tomcat 请求线程）中执行，获取用户 id、执行 Lua 脚本、创建订单对象、放入队列并返回：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@Override</span></span><br><span class="line"><span class="keyword">public</span> <span class="type">Result</span> <span class="title function_">seckillVoucher</span><span class="params">(Long voucherId)</span> &#123;</span><br><span class="line">    <span class="type">Long</span> <span class="variable">userId</span> <span class="operator">=</span> UserHolder.getUser().getId();</span><br><span class="line">    <span class="type">Long</span> <span class="variable">result</span> <span class="operator">=</span> stringRedisTemplate.execute(</span><br><span class="line">            SECKILL_SCRIPT, Collections.emptyList(),</span><br><span class="line">            voucherId.toString(), userId.toString()</span><br><span class="line">    );</span><br><span class="line">    <span class="type">int</span> <span class="variable">r</span> <span class="operator">=</span> result.intValue();</span><br><span class="line">    <span class="keyword">if</span> (r != <span class="number">0</span>) &#123;</span><br><span class="line">        <span class="keyword">return</span> Result.fail(r == <span class="number">1</span> ? <span class="string">&quot;库存不足!&quot;</span> : <span class="string">&quot;不允许重复下单!&quot;</span>);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="type">VoucherOrder</span> <span class="variable">voucherOrder</span> <span class="operator">=</span> <span class="keyword">new</span> <span class="title class_">VoucherOrder</span>();</span><br><span class="line">    <span class="type">long</span> <span class="variable">orderId</span> <span class="operator">=</span> redisIdWorker.nextId(<span class="string">&quot;order&quot;</span>);</span><br><span class="line">    voucherOrder.setId(orderId);</span><br><span class="line">    voucherOrder.setUserId(userId);</span><br><span class="line">    voucherOrder.setVoucherId(voucherId);</span><br><span class="line"></span><br><span class="line">    orderTasks.add(voucherOrder);</span><br><span class="line">    iVoucherOrderService = (IVoucherOrderService) AopContext.currentProxy();</span><br><span class="line">    <span class="keyword">return</span> Result.ok(orderId);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>关键点：</p>
+<ul>
+<li><code>userId</code> 在主线程通过 <code>UserHolder.getUser().getId()</code> 获取，并存入 <code>VoucherOrder</code> 对象。异步线程直接从订单对象读取，不再调用 <code>UserHolder</code></li>
+<li><code>orderId</code> 由 <code>RedisIdWorker.nextId(&quot;order&quot;)</code> 生成，判断通过后才生成并返回给用户</li>
+<li><code>AopContext.currentProxy()</code> 获取 Spring 代理对象，确保异步线程调用 <code>createVoucherOrder</code> 时 <code>@Transactional</code> 生效</li>
+</ul>
+<p><strong>异步线程执行数据库操作</strong>：<code>createVoucherOrder</code> 只做扣减库存和保存订单，不再校验一人一单：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@Transactional</span></span><br><span class="line"><span class="keyword">public</span> <span class="type">void</span> <span class="title function_">createVoucherOrder</span><span class="params">(VoucherOrder voucherOrder)</span> &#123;</span><br><span class="line">    <span class="type">Long</span> <span class="variable">voucherId</span> <span class="operator">=</span> voucherOrder.getVoucherId();</span><br><span class="line"></span><br><span class="line">    <span class="type">boolean</span> <span class="variable">success</span> <span class="operator">=</span> seckillVoucherService.update()</span><br><span class="line">            .setSql(<span class="string">&quot;stock=stock-1&quot;</span>)</span><br><span class="line">            .eq(<span class="string">&quot;voucher_id&quot;</span>, voucherId)</span><br><span class="line">            .gt(<span class="string">&quot;stock&quot;</span>, <span class="number">0</span>)</span><br><span class="line">            .update();</span><br><span class="line">    <span class="keyword">if</span> (!success) &#123;</span><br><span class="line">        log.error(<span class="string">&quot;库存不足&quot;</span>);</span><br><span class="line">        <span class="keyword">return</span>;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    save(voucherOrder);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p><code>.gt(&quot;stock&quot;, 0)</code> 是数据库层面的兜底保护：即使 Redis 判断已通过，数据库仍确保不会扣到负数。</p>
+<h3 id="5-3-完整调用链"><a href="#5-3-完整调用链" class="headerlink" title="5.3 完整调用链"></a>5.3 完整调用链</h3><figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line">用户请求</span><br><span class="line">    ↓</span><br><span class="line">seckillVoucher (主线程)</span><br><span class="line">    ├── UserHolder.getUser().getId()  获取用户id</span><br><span class="line">    ├── 执行 Lua 脚本                  原子判断库存与一人一单</span><br><span class="line">    ├── 判断返回值</span><br><span class="line">    │     0 → 继续; 1 → 库存不足; 2 → 重复下单</span><br><span class="line">    ├── 创建 VoucherOrder 对象</span><br><span class="line">    ├── orderTasks.add(voucherOrder)  放入阻塞队列</span><br><span class="line">    └── 返回订单 id</span><br><span class="line">         ↓</span><br><span class="line">VoucherOrderHandler (异步线程)</span><br><span class="line">    ├── orderTasks.take()             阻塞获取订单</span><br><span class="line">    └── createVoucherOrder(order)</span><br><span class="line">            ├── 扣减数据库库存 (stock &gt; 0)</span><br><span class="line">            └── save(order)           保存订单到数据库</span><br></pre></td></tr></table></figure>
+
+<h2 id="六、今日问题与注意事项"><a href="#六、今日问题与注意事项" class="headerlink" title="六、今日问题与注意事项"></a>六、今日问题与注意事项</h2><h3 id="6-1-ThreadLocal-在异步线程中失效"><a href="#6-1-ThreadLocal-在异步线程中失效" class="headerlink" title="6.1 ThreadLocal 在异步线程中失效"></a>6.1 ThreadLocal 在异步线程中失效</h3><ul>
+<li><strong>现象</strong>：在异步线程（<code>VoucherOrderHandler</code>）中调用 <code>UserHolder.getUser().getId()</code> 抛出异常。</li>
+<li><strong>原因</strong>：<code>UserHolder</code> 内部使用 <code>ThreadLocal</code> 存储用户信息，<code>ThreadLocal</code> 的数据只对当前线程可见。主线程（Tomcat 请求线程）存入的用户信息，异步线程无法读取。</li>
+<li><strong>解决</strong>：在主线程中获取 <code>userId</code> 并存入 <code>VoucherOrder</code> 对象，异步线程通过 <code>voucherOrder.getUserId()</code> 读取，不再依赖 <code>ThreadLocal</code>。</li>
+<li><strong>提醒</strong>：任何在拦截器中通过 <code>ThreadLocal</code> 设置的上下文信息（用户、请求头等），传递到异步线程时都需要显式传入对象，不能直接调用 <code>ThreadLocal</code> 的 getter。</li>
+</ul>
+<h3 id="6-2-阻塞队列方案的局限性"><a href="#6-2-阻塞队列方案的局限性" class="headerlink" title="6.2 阻塞队列方案的局限性"></a>6.2 阻塞队列方案的局限性</h3><ul>
+<li><strong>内存限制</strong>：<code>ArrayBlockingQueue</code> 存储在 JVM 堆内存中，容量受限于内存大小。队列设置过大可能引发 OOM，过小则在高并发时可能拒绝入队。</li>
+<li><strong>数据安全问题</strong>：服务突然宕机时，队列中尚未消费的订单会随内存丢失，用户已收到订单 id 但实际订单未落库。</li>
+</ul>
+<blockquote>
+<p>这两个问题是阻塞队列作为消息队列的固有缺陷，后续可改用 Redis Stream 或专业消息队列（如 RabbitMQ、Kafka）解决，利用持久化和确认机制保证消息不丢失。</p>
+</blockquote>
+<h3 id="6-3-未校验秒杀时间"><a href="#6-3-未校验秒杀时间" class="headerlink" title="6.3 未校验秒杀时间"></a>6.3 未校验秒杀时间</h3><p>当前 Lua 脚本只判断库存和一人一单，没有校验秒杀时间。虽然前端会限制秒杀时间窗口，但后端缺少校验存在安全隐患。</p>
+<p>改进思路：将 Redis 中库存的存储方式从 String 改为 Hash，同时存储库存、开始时间和结束时间，在 Lua 脚本中增加时间判断逻辑。</p>
+<h2 id="今日总结"><a href="#今日总结" class="headerlink" title="今日总结"></a>今日总结</h2><table>
+<thead>
+<tr>
+<th>模块</th>
+<th>核心要点</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>性能问题</td>
+<td>原方案 2 查 2 改串行执行，数据库 IO 是主要耗时点</td>
+</tr>
+<tr>
+<td>优化方案</td>
+<td>Redis 预判断 + 阻塞队列异步下单，判断通过即返回</td>
+</tr>
+<tr>
+<td>Redis 缓存</td>
+<td>新增秒杀券时缓存库存（String）和已下单用户（Set）</td>
+</tr>
+<tr>
+<td>Lua 脚本</td>
+<td>原子执行库存判断、一人一单检查、扣减库存、记录用户</td>
+</tr>
+<tr>
+<td>返回值约定</td>
+<td>0 &#x3D; 成功，1 &#x3D; 库存不足，2 &#x3D; 重复下单</td>
+</tr>
+<tr>
+<td>阻塞队列</td>
+<td><code>ArrayBlockingQueue</code> + 单线程异步消费，主线程只负责入队</td>
+</tr>
+<tr>
+<td>ThreadLocal 踩坑</td>
+<td>异步线程无法读取主线程 <code>ThreadLocal</code>，需通过对象传递</td>
+</tr>
+<tr>
+<td>阻塞队列局限</td>
+<td>内存限制 + 宕机丢数据，可改用消息队列持久化</td>
+</tr>
+<tr>
+<td>遗留问题</td>
+<td>Lua 脚本未校验秒杀时间，可改用 Hash 存储时间字段</td>
+</tr>
+</tbody></table>
+
+      </div>
+
+    
+    
+    
+
+      <footer class="post-footer">
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/2026/09/20/%E5%A4%8D%E7%9B%98%E4%B8%8E%E7%AC%94%E8%AE%B0/%E5%A4%8D%E7%9B%98/day40%20Redis%E7%A7%92%E6%9D%80%E4%BC%98%E5%8C%96%E4%B8%8E%E9%98%BB%E5%A1%9E%E9%98%9F%E5%88%97%E5%BC%82%E6%AD%A5%E4%B8%8B%E5%8D%95/" rel="prev" title="day40 Redis秒杀优化与阻塞队列异步下单">
+      <i class="fa fa-chevron-left"></i> day40 Redis秒杀优化与阻塞队列异步下单
+    </a></div>
+      <div class="post-nav-item"></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+
+
+          </div>
+          
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#day40-Redis%E7%A7%92%E6%9D%80%E4%BC%98%E5%8C%96%E4%B8%8E%E9%98%BB%E5%A1%9E%E9%98%9F%E5%88%97%E5%BC%82%E6%AD%A5%E4%B8%8B%E5%8D%95"><span class="nav-number">1.</span> <span class="nav-text">day40 Redis秒杀优化与阻塞队列异步下单</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%80%E3%80%81%E5%8E%9F%E7%A7%92%E6%9D%80%E4%B8%9A%E5%8A%A1%E7%9A%84%E9%97%AE%E9%A2%98%E5%88%86%E6%9E%90"><span class="nav-number">1.1.</span> <span class="nav-text">一、原秒杀业务的问题分析</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BA%8C%E3%80%81%E4%BC%98%E5%8C%96%E6%95%B4%E4%BD%93%E6%80%9D%E8%B7%AF"><span class="nav-number">1.2.</span> <span class="nav-text">二、优化整体思路</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#2-1-%E6%A0%B8%E5%BF%83%E6%96%B9%E6%A1%88"><span class="nav-number">1.2.1.</span> <span class="nav-text">2.1 核心方案</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2-2-%E4%BC%98%E5%8C%96%E5%89%8D%E5%90%8E%E5%AF%B9%E6%AF%94"><span class="nav-number">1.2.2.</span> <span class="nav-text">2.2 优化前后对比</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%89%E3%80%81Redis-%E7%BC%93%E5%AD%98%E7%A7%92%E6%9D%80%E5%BA%93%E5%AD%98"><span class="nav-number">1.3.</span> <span class="nav-text">三、Redis 缓存秒杀库存</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#3-1-%E7%BC%93%E5%AD%98%E6%97%B6%E6%9C%BA"><span class="nav-number">1.3.1.</span> <span class="nav-text">3.1 缓存时机</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#3-2-Redis-%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84"><span class="nav-number">1.3.2.</span> <span class="nav-text">3.2 Redis 数据结构</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%9B%9B%E3%80%81Lua-%E8%84%9A%E6%9C%AC%E5%8E%9F%E5%AD%90%E5%88%A4%E6%96%AD"><span class="nav-number">1.4.</span> <span class="nav-text">四、Lua 脚本原子判断</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#4-1-%E8%84%9A%E6%9C%AC%E5%86%85%E5%AE%B9"><span class="nav-number">1.4.1.</span> <span class="nav-text">4.1 脚本内容</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#4-2-%E8%BF%94%E5%9B%9E%E5%80%BC%E5%90%AB%E4%B9%89"><span class="nav-number">1.4.2.</span> <span class="nav-text">4.2 返回值含义</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#4-3-%E4%B8%BA%E4%BB%80%E4%B9%88%E5%90%8E%E7%BB%AD%E4%B8%8D%E9%9C%80%E8%A6%81%E5%8A%A0%E9%94%81"><span class="nav-number">1.4.3.</span> <span class="nav-text">4.3 为什么后续不需要加锁</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#4-4-%E6%89%A7%E8%A1%8C%E6%B5%81%E7%A8%8B"><span class="nav-number">1.4.4.</span> <span class="nav-text">4.4 执行流程</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BA%94%E3%80%81%E9%98%BB%E5%A1%9E%E9%98%9F%E5%88%97%E4%B8%8E%E5%BC%82%E6%AD%A5%E4%B8%8B%E5%8D%95"><span class="nav-number">1.5.</span> <span class="nav-text">五、阻塞队列与异步下单</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#5-1-%E9%98%BB%E5%A1%9E%E9%98%9F%E5%88%97"><span class="nav-number">1.5.1.</span> <span class="nav-text">5.1 阻塞队列</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#5-2-%E5%BC%82%E6%AD%A5%E4%B8%8B%E5%8D%95%E5%AE%9E%E7%8E%B0"><span class="nav-number">1.5.2.</span> <span class="nav-text">5.2 异步下单实现</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#5-3-%E5%AE%8C%E6%95%B4%E8%B0%83%E7%94%A8%E9%93%BE"><span class="nav-number">1.5.3.</span> <span class="nav-text">5.3 完整调用链</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%85%AD%E3%80%81%E4%BB%8A%E6%97%A5%E9%97%AE%E9%A2%98%E4%B8%8E%E6%B3%A8%E6%84%8F%E4%BA%8B%E9%A1%B9"><span class="nav-number">1.6.</span> <span class="nav-text">六、今日问题与注意事项</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#6-1-ThreadLocal-%E5%9C%A8%E5%BC%82%E6%AD%A5%E7%BA%BF%E7%A8%8B%E4%B8%AD%E5%A4%B1%E6%95%88"><span class="nav-number">1.6.1.</span> <span class="nav-text">6.1 ThreadLocal 在异步线程中失效</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#6-2-%E9%98%BB%E5%A1%9E%E9%98%9F%E5%88%97%E6%96%B9%E6%A1%88%E7%9A%84%E5%B1%80%E9%99%90%E6%80%A7"><span class="nav-number">1.6.2.</span> <span class="nav-text">6.2 阻塞队列方案的局限性</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#6-3-%E6%9C%AA%E6%A0%A1%E9%AA%8C%E7%A7%92%E6%9D%80%E6%97%B6%E9%97%B4"><span class="nav-number">1.6.3.</span> <span class="nav-text">6.3 未校验秒杀时间</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BB%8A%E6%97%A5%E6%80%BB%E7%BB%93"><span class="nav-number">1.7.</span> <span class="nav-text">今日总结</span></a></li></ol></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="ZHX"
+      src="/images/avatar.jpeg">
+  <p class="site-author-name" itemprop="name">ZHX</p>
+  <div class="site-description" itemprop="description">记录编程学习、项目实战和踩坑笔记</div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">56</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+            <a href="/categories/">
+          
+        <span class="site-state-item-count">10</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+  </nav>
+</div>
+
+
+
+      </div>
+        <div class="back-to-top motion-element">
+          <i class="fa fa-arrow-up"></i>
+          <span>0%</span>
+        </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2026</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">ZHX</span>
+</div>
+  <div class="powered-by">由 <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Gemini</a> 强力驱动
+  </div>
+
+        
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/pisces.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+
+</body>
+</html>

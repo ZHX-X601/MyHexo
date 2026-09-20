@@ -1,0 +1,582 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 8.1.2">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/favicon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon.png">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/all.min.css">
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"www.blog-x.cc.cd","root":"/","scheme":"Gemini","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"always","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":false,"show_result":false,"style":null},"back2top":{"enable":true,"sidebar":true,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":false,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}}};
+  </script>
+
+  <meta name="description" content="day39 Redisson可重入锁、WatchDog与MultiLock一、为什么使用 Redisson上一阶段实现的 SimpleRedisLock 已经能借助线程标识和 Lua 脚本避免误删，但仍有四个不足：    问题 影响 Redisson 的对应能力    不可重入 同一线程再次获取同一把锁会失败，嵌套调用可能无法继续 使用 Hash 记录持有线程与重入次数   不可重试 获取失败后立">
+<meta property="og:type" content="article">
+<meta property="og:title" content="day39 Redisson可重入锁,锁重试,WatchDog与MultiLock">
+<meta property="og:url" content="https://www.blog-x.cc.cd/2026/09/19/%E5%A4%8D%E7%9B%98%E4%B8%8E%E7%AC%94%E8%AE%B0/%E7%AC%94%E8%AE%B0/day39%20Redisson%E5%8F%AF%E9%87%8D%E5%85%A5%E9%94%81,%E9%94%81%E9%87%8D%E8%AF%95,WatchDog%E4%B8%8EMultiLock/index.html">
+<meta property="og:site_name" content="我的学习日记">
+<meta property="og:description" content="day39 Redisson可重入锁、WatchDog与MultiLock一、为什么使用 Redisson上一阶段实现的 SimpleRedisLock 已经能借助线程标识和 Lua 脚本避免误删，但仍有四个不足：    问题 影响 Redisson 的对应能力    不可重入 同一线程再次获取同一把锁会失败，嵌套调用可能无法继续 使用 Hash 记录持有线程与重入次数   不可重试 获取失败后立">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://www.blog-x.cc.cd/assets/Pasted%20image%2020260919235656.png">
+<meta property="article:published_time" content="2026-09-19T06:00:38.000Z">
+<meta property="article:modified_time" content="2026-09-20T06:36:05.486Z">
+<meta property="article:author" content="ZHX">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://www.blog-x.cc.cd/assets/Pasted%20image%2020260919235656.png">
+
+<link rel="canonical" href="https://www.blog-x.cc.cd/2026/09/19/%E5%A4%8D%E7%9B%98%E4%B8%8E%E7%AC%94%E8%AE%B0/%E7%AC%94%E8%AE%B0/day39%20Redisson%E5%8F%AF%E9%87%8D%E5%85%A5%E9%94%81,%E9%94%81%E9%87%8D%E8%AF%95,WatchDog%E4%B8%8EMultiLock/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'zh-CN'
+  };
+</script>
+
+  <title>day39 Redisson可重入锁,锁重试,WatchDog与MultiLock | 我的学习日记</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">我的学习日记</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="main-menu menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档<span class="badge">56</span></a>
+
+  </li>
+        <li class="menu-item menu-item-categories">
+
+    <a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分类<span class="badge">10</span></a>
+
+  </li>
+        <li class="menu-item menu-item-about">
+
+    <a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>关于</a>
+
+  </li>
+        <li class="menu-item menu-item-tags">
+
+    <a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签<span class="badge">0</span></a>
+
+  </li>
+  </ul>
+</nav>
+
+
+
+
+</div>
+    </header>
+
+    
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://www.blog-x.cc.cd/2026/09/19/%E5%A4%8D%E7%9B%98%E4%B8%8E%E7%AC%94%E8%AE%B0/%E7%AC%94%E8%AE%B0/day39%20Redisson%E5%8F%AF%E9%87%8D%E5%85%A5%E9%94%81,%E9%94%81%E9%87%8D%E8%AF%95,WatchDog%E4%B8%8EMultiLock/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.jpeg">
+      <meta itemprop="name" content="ZHX">
+      <meta itemprop="description" content="记录编程学习、项目实战和踩坑笔记">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="我的学习日记">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          day39 Redisson可重入锁,锁重试,WatchDog与MultiLock
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2026-09-19 14:00:38" itemprop="dateCreated datePublished" datetime="2026-09-19T14:00:38+08:00">2026-09-19</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="far fa-calendar-check"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2026-09-20 14:36:05" itemprop="dateModified" datetime="2026-09-20T14:36:05+08:00">2026-09-20</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E7%AC%94%E8%AE%B0/" itemprop="url" rel="index"><span itemprop="name">笔记</span></a>
+                </span>
+                  ，
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E7%AC%94%E8%AE%B0/Redis/" itemprop="url" rel="index"><span itemprop="name">Redis</span></a>
+                </span>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+      <div class="post-body" itemprop="articleBody">
+
+        
+          <h1 id="day39-Redisson可重入锁、WatchDog与MultiLock"><a href="#day39-Redisson可重入锁、WatchDog与MultiLock" class="headerlink" title="day39 Redisson可重入锁、WatchDog与MultiLock"></a>day39 Redisson可重入锁、WatchDog与MultiLock</h1><h2 id="一、为什么使用-Redisson"><a href="#一、为什么使用-Redisson" class="headerlink" title="一、为什么使用 Redisson"></a>一、为什么使用 Redisson</h2><p>上一阶段实现的 <code>SimpleRedisLock</code> 已经能借助线程标识和 Lua 脚本避免误删，但仍有四个不足：</p>
+<table>
+<thead>
+<tr>
+<th>问题</th>
+<th>影响</th>
+<th>Redisson 的对应能力</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>不可重入</td>
+<td>同一线程再次获取同一把锁会失败，嵌套调用可能无法继续</td>
+<td>使用 Hash 记录持有线程与重入次数</td>
+</tr>
+<tr>
+<td>不可重试</td>
+<td>获取失败后立即返回，无法在限定时间内等待</td>
+<td><code>tryLock</code> 支持等待并重试</td>
+</tr>
+<tr>
+<td>固定超时释放</td>
+<td>业务未执行完，锁可能先过期</td>
+<td>WatchDog 自动续期</td>
+</tr>
+<tr>
+<td>主从一致性</td>
+<td>锁尚未同步时主节点故障，故障转移后可能丢锁</td>
+<td>MultiLock 同时锁定多个独立节点</td>
+</tr>
+</tbody></table>
+<p>Redisson 是基于 Redis 的 Java 客户端，提供 <code>RLock</code> 等分布式对象。这里使用它的目的不是替换 Redis，而是复用其已经封装好的分布式锁语义与复杂并发处理。</p>
+<h2 id="二、项目接入与基本使用"><a href="#二、项目接入与基本使用" class="headerlink" title="二、项目接入与基本使用"></a>二、项目接入与基本使用</h2><h3 id="2-1-引入依赖"><a href="#2-1-引入依赖" class="headerlink" title="2.1 引入依赖"></a>2.1 引入依赖</h3><p>项目的 <code>pom.xml</code> 已引入 <code>redisson</code>：</p>
+<figure class="highlight xml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">dependency</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">groupId</span>&gt;</span>org.redisson<span class="tag">&lt;/<span class="name">groupId</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">artifactId</span>&gt;</span>redisson<span class="tag">&lt;/<span class="name">artifactId</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">version</span>&gt;</span>4.7.0<span class="tag">&lt;/<span class="name">version</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">dependency</span>&gt;</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="2-2-创建-RedissonClient"><a href="#2-2-创建-RedissonClient" class="headerlink" title="2.2 创建 RedissonClient"></a>2.2 创建 RedissonClient</h3><p><code>RedissonConfig</code> 使用单节点模式连接本机 Redis。项目目前分别为 <code>6379</code> 和 <code>6380</code> 创建了两个客户端：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@Configuration</span></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">class</span> <span class="title class_">RedissonConfig</span> &#123;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Bean</span></span><br><span class="line">    <span class="keyword">public</span> <span class="type">RedissonClient</span> <span class="title function_">redissonClient1</span><span class="params">()</span> &#123;</span><br><span class="line">        <span class="type">Config</span> <span class="variable">config</span> <span class="operator">=</span> <span class="keyword">new</span> <span class="title class_">Config</span>();</span><br><span class="line">        config.useSingleServer().setAddress(<span class="string">&quot;redis://localhost:6379&quot;</span>);</span><br><span class="line">        <span class="keyword">return</span> Redisson.create(config);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Bean</span></span><br><span class="line">    <span class="keyword">public</span> <span class="type">RedissonClient</span> <span class="title function_">redissonClient2</span><span class="params">()</span> &#123;</span><br><span class="line">        <span class="type">Config</span> <span class="variable">config</span> <span class="operator">=</span> <span class="keyword">new</span> <span class="title class_">Config</span>();</span><br><span class="line">        config.useSingleServer().setAddress(<span class="string">&quot;redis://localhost:6380&quot;</span>);</span><br><span class="line">        <span class="keyword">return</span> Redisson.create(config);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p><code>redis://</code> 表示非 TLS 连接；如果 Redis 配有密码，还需要调用 <code>setPassword</code>。</p>
+<h3 id="2-3-在一人一单业务中使用-RLock"><a href="#2-3-在一人一单业务中使用-RLock" class="headerlink" title="2.3 在一人一单业务中使用 RLock"></a>2.3 在一人一单业务中使用 RLock</h3><p>项目使用用户 ID 组成锁名，使同一用户的下单请求互斥，不同用户仍可并行：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">Long</span> <span class="variable">userId</span> <span class="operator">=</span> UserHolder.getUser().getId();</span><br><span class="line"><span class="type">RLock</span> <span class="variable">lock</span> <span class="operator">=</span> redissonClient.getLock(<span class="string">&quot;lock:order:&quot;</span> + userId);</span><br><span class="line"><span class="type">boolean</span> <span class="variable">success</span> <span class="operator">=</span> lock.tryLock();</span><br><span class="line"><span class="keyword">if</span> (!success) &#123;</span><br><span class="line">    <span class="keyword">return</span> Result.fail(<span class="string">&quot;不允许重复下单!&quot;</span>);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="keyword">try</span> &#123;</span><br><span class="line">    <span class="type">IVoucherOrderService</span> <span class="variable">service</span> <span class="operator">=</span></span><br><span class="line">            (IVoucherOrderService) AopContext.currentProxy();</span><br><span class="line">    <span class="keyword">return</span> service.createVoucherOrder(voucherId);</span><br><span class="line">&#125; <span class="keyword">finally</span> &#123;</span><br><span class="line">    lock.unlock();</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>基本调用顺序是：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">RedissonClient.getLock(锁名称)</span><br><span class="line">    ↓</span><br><span class="line">RLock.tryLock() 尝试获取锁</span><br><span class="line">    ↓</span><br><span class="line">获取成功后执行业务</span><br><span class="line">    ↓</span><br><span class="line">finally 中 unlock() 释放锁</span><br></pre></td></tr></table></figure>
+
+<p>释放锁必须放在 <code>finally</code> 中，避免业务异常导致正常释放逻辑被跳过。只有成功获取锁后才应执行 <code>unlock()</code>；项目当前的控制流符合这一点。</p>
+<p><code>tryLock</code> 的常用形式：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">boolean</span> <span class="variable">acquired</span> <span class="operator">=</span> lock.tryLock(<span class="number">1</span>, <span class="number">10</span>, TimeUnit.SECONDS);</span><br></pre></td></tr></table></figure>
+
+<ul>
+<li><code>waitTime</code>：最多等待多久，在此期间 Redisson 可以重试；</li>
+<li><code>leaseTime</code>：获取成功后锁的固定租约时间；</li>
+<li><code>TimeUnit</code>：时间单位。</li>
+</ul>
+<p>如果显式传入 <code>leaseTime</code>，锁按固定租约到期；需要自动续期时，不应显式指定固定租约时间。</p>
+<h2 id="三、可重入锁原理"><a href="#三、可重入锁原理" class="headerlink" title="三、可重入锁原理"></a>三、可重入锁原理</h2><h3 id="3-1-Hash-存储结构"><a href="#3-1-Hash-存储结构" class="headerlink" title="3.1 Hash 存储结构"></a>3.1 Hash 存储结构</h3><p>Redisson 的可重入锁使用 Redis Hash 保存锁状态：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">锁名称（Redis key）</span><br><span class="line">└── 客户端标识:线程ID（field） → 重入次数（value）</span><br></pre></td></tr></table></figure>
+
+<ul>
+<li>Redis key 表示哪一把锁；</li>
+<li>field 标识持有锁的客户端和线程；</li>
+<li>value 是该线程的重入计数。</li>
+</ul>
+<p>同一线程再次进入相同锁保护的代码时，不需要与自己竞争，只需增加计数。每次退出一层就减少计数，直到计数归零才真正删除锁。</p>
+<h3 id="3-2-获取锁流程"><a href="#3-2-获取锁流程" class="headerlink" title="3.2 获取锁流程"></a>3.2 获取锁流程</h3><p>获取锁的判断与写入由 Lua 脚本原子执行：</p>
+<ol>
+<li>锁 key 不存在：写入当前线程标识，计数设为 1，并设置过期时间，获取成功；</li>
+<li>锁 key 已存在且包含当前线程标识：计数加 1，刷新过期时间，重入成功；</li>
+<li>锁由其他线程持有：获取失败，返回锁的剩余存活时间。</li>
+</ol>
+<p>核心 Lua 逻辑可概括为：</p>
+<figure class="highlight lua"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">if</span> redis.call(<span class="string">&#x27;exists&#x27;</span>, KEYS[<span class="number">1</span>]) == <span class="number">0</span> <span class="keyword">then</span></span><br><span class="line">    redis.call(<span class="string">&#x27;hset&#x27;</span>, KEYS[<span class="number">1</span>], ARGV[<span class="number">2</span>], <span class="number">1</span>)</span><br><span class="line">    redis.call(<span class="string">&#x27;pexpire&#x27;</span>, KEYS[<span class="number">1</span>], ARGV[<span class="number">1</span>])</span><br><span class="line">    <span class="keyword">return</span> <span class="literal">nil</span></span><br><span class="line"><span class="keyword">end</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">if</span> redis.call(<span class="string">&#x27;hexists&#x27;</span>, KEYS[<span class="number">1</span>], ARGV[<span class="number">2</span>]) == <span class="number">1</span> <span class="keyword">then</span></span><br><span class="line">    redis.call(<span class="string">&#x27;hincrby&#x27;</span>, KEYS[<span class="number">1</span>], ARGV[<span class="number">2</span>], <span class="number">1</span>)</span><br><span class="line">    redis.call(<span class="string">&#x27;pexpire&#x27;</span>, KEYS[<span class="number">1</span>], ARGV[<span class="number">1</span>])</span><br><span class="line">    <span class="keyword">return</span> <span class="literal">nil</span></span><br><span class="line"><span class="keyword">end</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">return</span> redis.call(<span class="string">&#x27;pttl&#x27;</span>, KEYS[<span class="number">1</span>])</span><br></pre></td></tr></table></figure>
+
+<p>返回 <code>nil</code> 表示首次获取或重入成功；返回剩余 TTL 表示锁正由其他线程持有。</p>
+<h3 id="3-3-释放锁流程"><a href="#3-3-释放锁流程" class="headerlink" title="3.3 释放锁流程"></a>3.3 释放锁流程</h3><p>释放时同样需要用 Lua 保证“检查归属、修改计数、删除或续期”是一个原子操作：</p>
+<ol>
+<li>判断锁是否存在以及是否属于当前线程；</li>
+<li>不属于当前线程时不允许释放；</li>
+<li>属于当前线程时将重入计数减 1；</li>
+<li>计数仍大于 0，说明只退出了内层调用，刷新过期时间；</li>
+<li>计数归零，才删除 Redis key，并通知等待该锁的线程。</li>
+</ol>
+<p>因此，获取多少次就需要释放多少次。内层调用提前删除 key 会破坏外层业务的互斥性，重入计数正是为了避免这个问题。</p>
+<h2 id="四、锁重试与-WatchDog"><a href="#四、锁重试与-WatchDog" class="headerlink" title="四、锁重试与 WatchDog"></a>四、锁重试与 WatchDog</h2><h3 id="4-1-有限等待与重试"><a href="#4-1-有限等待与重试" class="headerlink" title="4.1 有限等待与重试"></a>4.1 有限等待与重试</h3><p>带 <code>waitTime</code> 的 <code>tryLock</code> 并不是无休止地轮询 Redis，其主要流程是：</p>
+<ol>
+<li>执行 Lua 脚本尝试获取锁；</li>
+<li>返回 <code>null</code> 时获取成功；否则得到当前锁的剩余 TTL；</li>
+<li>扣除本次操作耗时，若剩余等待时间小于等于 0，则返回失败；</li>
+<li>订阅锁释放通知，并在剩余时间内等待；</li>
+<li>收到通知或等待一段时间后再次尝试获取；</li>
+<li>获取成功则返回，等待时间耗尽则失败。</li>
+</ol>
+<p>这种“通知 + 再尝试”的方式减少了纯忙等造成的无效请求。<code>tryLock()</code> 无参调用则是立即尝试，不提供最大等待时间。</p>
+<h3 id="4-2-WatchDog-自动续期"><a href="#4-2-WatchDog-自动续期" class="headerlink" title="4.2 WatchDog 自动续期"></a>4.2 WatchDog 自动续期</h3><p>固定过期时间无法预知业务究竟执行多久。租约太短会在业务结束前丢锁，租约太长又会使客户端故障后的锁长时间不释放。WatchDog 用自动续期协调这两个问题：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">未显式指定 leaseTime 并成功获取锁</span><br><span class="line">    ↓</span><br><span class="line">按内部默认租约设置过期时间（常见默认值为 30 秒）</span><br><span class="line">    ↓</span><br><span class="line">客户端仍持有锁时，定时检查并续期</span><br><span class="line">    ↓</span><br><span class="line">业务完成 unlock()，取消续期并释放锁</span><br></pre></td></tr></table></figure>
+
+<p>在本次学习对应的默认配置中，WatchDog 大约每 10 秒把锁续回 30 秒。续期仍会校验锁的线程标识，避免给别人的锁续期。</p>
+<p>如果持锁客户端崩溃，续期任务也会停止，Redis 中的过期时间最终会清除锁，避免永久死锁。</p>
+<blockquote>
+<p><strong>注意</strong>：WatchDog 的“未设置过期时间”是指调用加锁方法时没有显式传入 <code>leaseTime</code>，不是 Redis key 没有 TTL。Redisson 仍会给锁设置内部租约并周期续期。</p>
+</blockquote>
+<h3 id="4-3-本次流程图"><a href="#4-3-本次流程图" class="headerlink" title="4.3 本次流程图"></a>4.3 本次流程图</h3><p><img src="/./assets/Pasted%20image%2020260919235656.png"></p>
+<p>图中的关键判断是：首次 Lua 加锁成功后，如果未显式指定固定租约，才进入 WatchDog 续期；释放成功后停止续期任务。</p>
+<h2 id="五、MultiLock-与主从一致性风险"><a href="#五、MultiLock-与主从一致性风险" class="headerlink" title="五、MultiLock 与主从一致性风险"></a>五、MultiLock 与主从一致性风险</h2><h3 id="5-1-单个主从集群为什么可能丢锁"><a href="#5-1-单个主从集群为什么可能丢锁" class="headerlink" title="5.1 单个主从集群为什么可能丢锁"></a>5.1 单个主从集群为什么可能丢锁</h3><p>Redis 主从复制通常是异步的，可能出现以下时序：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">线程 A 在主节点写入锁</span><br><span class="line">    ↓</span><br><span class="line">锁 key 尚未复制到从节点</span><br><span class="line">    ↓</span><br><span class="line">主节点宕机，从节点晋升为主节点</span><br><span class="line">    ↓</span><br><span class="line">新主节点上没有该锁</span><br><span class="line">    ↓</span><br><span class="line">线程 B 再次获取同名锁，互斥失效</span><br></pre></td></tr></table></figure>
+
+<p>这里的结果是<strong>锁记录丢失、其他线程可能同时进入临界区</strong>，而不是锁无法释放造成的死锁。</p>
+<h3 id="5-2-MultiLock-的组合方式"><a href="#5-2-MultiLock-的组合方式" class="headerlink" title="5.2 MultiLock 的组合方式"></a>5.2 MultiLock 的组合方式</h3><p>MultiLock 将多个独立 Redis 节点上的 <code>RLock</code> 组合为一把联锁。只有所有子锁都获取成功，整体才算成功；如果某个子锁获取失败或等待超时，需要释放本次已经获取的子锁。</p>
+<p>最小用法如下：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">RLock</span> <span class="variable">lock1</span> <span class="operator">=</span> redissonClient1.getLock(<span class="string">&quot;lock:order:&quot;</span> + userId);</span><br><span class="line"><span class="type">RLock</span> <span class="variable">lock2</span> <span class="operator">=</span> redissonClient2.getLock(<span class="string">&quot;lock:order:&quot;</span> + userId);</span><br><span class="line"><span class="type">RLock</span> <span class="variable">multiLock</span> <span class="operator">=</span> redissonClient1.getMultiLock(lock1, lock2);</span><br><span class="line"></span><br><span class="line"><span class="type">boolean</span> <span class="variable">acquired</span> <span class="operator">=</span> multiLock.tryLock();</span><br><span class="line"><span class="keyword">if</span> (!acquired) &#123;</span><br><span class="line">    <span class="keyword">return</span> Result.fail(<span class="string">&quot;不允许重复下单!&quot;</span>);</span><br><span class="line">&#125;</span><br><span class="line"><span class="keyword">try</span> &#123;</span><br><span class="line">    <span class="comment">// 执行业务</span></span><br><span class="line">&#125; <span class="keyword">finally</span> &#123;</span><br><span class="line">    multiLock.unlock();</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>这是原理示例。当前项目虽然创建了两个 <code>RedissonClient</code>，但业务代码仍只调用单个客户端的 <code>getLock</code>，尚未完成上述 MultiLock 组合。</p>
+<h3 id="5-3-代价与适用边界"><a href="#5-3-代价与适用边界" class="headerlink" title="5.3 代价与适用边界"></a>5.3 代价与适用边界</h3><p>MultiLock 通过“所有节点都成功”避免仅因单个节点丢失锁数据就重新取得完整锁，但可用性会降低：</p>
+<ul>
+<li>任一节点不可用，都可能导致整把锁获取失败；</li>
+<li>加锁与释放需要访问多个节点，网络和操作开销增加；</li>
+<li>它适合更重视锁安全、能够接受节点故障时暂时拒绝业务的场景。</li>
+</ul>
+<p>因此它是在一致性与可用性之间做取舍，并不是无代价地解决所有分布式锁问题。</p>
+<h2 id="六、今日问题与注意事项"><a href="#六、今日问题与注意事项" class="headerlink" title="六、今日问题与注意事项"></a>六、今日问题与注意事项</h2><h3 id="6-1-两个-RedissonClient-的注入歧义"><a href="#6-1-两个-RedissonClient-的注入歧义" class="headerlink" title="6.1 两个 RedissonClient 的注入歧义"></a>6.1 两个 RedissonClient 的注入歧义</h3><ul>
+<li><strong>现象</strong>：<code>RedissonConfig</code> 同时声明 <code>redissonClient1</code>、<code>redissonClient2</code>，业务字段只写了 <code>@Autowired private RedissonClient redissonClient;</code>。</li>
+<li><strong>原因</strong>：容器中有多个同类型 Bean，单纯按类型无法唯一确定注入目标。</li>
+<li><strong>解决方向</strong>：单锁业务明确使用 <code>@Qualifier(&quot;redissonClient1&quot;)</code>，或者用 <code>@Primary</code> 指定默认客户端；MultiLock 业务则分别注入两个客户端并组合各自的 <code>RLock</code>。</li>
+<li><strong>提醒</strong>：仅仅配置多个客户端并不会自动获得 MultiLock 语义。</li>
+</ul>
+<h3 id="6-2-显式租约与-WatchDog-不要混淆"><a href="#6-2-显式租约与-WatchDog-不要混淆" class="headerlink" title="6.2 显式租约与 WatchDog 不要混淆"></a>6.2 显式租约与 WatchDog 不要混淆</h3><ul>
+<li><code>tryLock(waitTime, leaseTime, unit)</code>：按传入的固定 <code>leaseTime</code> 自动释放，通常不会为这次锁启用 WatchDog 自动续期；</li>
+<li>不显式传入 <code>leaseTime</code>：成功获取后由 WatchDog 按内部租约自动续期；</li>
+<li><code>tryLock()</code>：立即尝试获取，但成功后仍可使用 WatchDog；代码注释中的“默认时间 30 秒”不等同于 30 秒后无条件释放。</li>
+</ul>
+<h2 id="今日总结"><a href="#今日总结" class="headerlink" title="今日总结"></a>今日总结</h2><table>
+<thead>
+<tr>
+<th>模块</th>
+<th>核心要点</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Redisson 接入</td>
+<td>通过 <code>RedissonClient</code> 获取 <code>RLock</code>，在 <code>finally</code> 中释放</td>
+</tr>
+<tr>
+<td>可重入</td>
+<td>Hash 的 field 标识线程，value 记录重入次数，计数归零才删除锁</td>
+</tr>
+<tr>
+<td>原子性</td>
+<td>获取、重入、释放等复合操作通过 Lua 脚本完成</td>
+</tr>
+<tr>
+<td>锁重试</td>
+<td>带等待时间的 <code>tryLock</code> 结合释放通知，在剩余时间内再次尝试</td>
+</tr>
+<tr>
+<td>WatchDog</td>
+<td>未显式指定固定租约时周期续期，释放或客户端失效后停止</td>
+</tr>
+<tr>
+<td>MultiLock</td>
+<td>所有独立节点都加锁成功才算成功，增强安全性但降低可用性</td>
+</tr>
+<tr>
+<td>项目现状</td>
+<td>已使用单个 <code>RLock</code>；两个客户端尚未组合为 MultiLock，注入目标也需明确</td>
+</tr>
+</tbody></table>
+
+      </div>
+
+    
+    
+    
+
+      <footer class="post-footer">
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/2026/09/19/%E5%A4%8D%E7%9B%98%E4%B8%8E%E7%AC%94%E8%AE%B0/%E5%A4%8D%E7%9B%98/day39%20%20Redisson%E5%8F%AF%E9%87%8D%E5%85%A5%E9%94%81,%E9%94%81%E9%87%8D%E8%AF%95,WatchDog%E4%B8%8EMultiLock/" rel="prev" title="day39 Redisson可重入锁,锁重试,WatchDog与MultiLock">
+      <i class="fa fa-chevron-left"></i> day39 Redisson可重入锁,锁重试,WatchDog与MultiLock
+    </a></div>
+      <div class="post-nav-item">
+    <a href="/2026/09/20/%E5%A4%8D%E7%9B%98%E4%B8%8E%E7%AC%94%E8%AE%B0/%E5%A4%8D%E7%9B%98/day40%20Redis%E7%A7%92%E6%9D%80%E4%BC%98%E5%8C%96%E4%B8%8E%E9%98%BB%E5%A1%9E%E9%98%9F%E5%88%97%E5%BC%82%E6%AD%A5%E4%B8%8B%E5%8D%95/" rel="next" title="day40 Redis秒杀优化与阻塞队列异步下单">
+      day40 Redis秒杀优化与阻塞队列异步下单 <i class="fa fa-chevron-right"></i>
+    </a></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+
+
+          </div>
+          
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#day39-Redisson%E5%8F%AF%E9%87%8D%E5%85%A5%E9%94%81%E3%80%81WatchDog%E4%B8%8EMultiLock"><span class="nav-number">1.</span> <span class="nav-text">day39 Redisson可重入锁、WatchDog与MultiLock</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%80%E3%80%81%E4%B8%BA%E4%BB%80%E4%B9%88%E4%BD%BF%E7%94%A8-Redisson"><span class="nav-number">1.1.</span> <span class="nav-text">一、为什么使用 Redisson</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BA%8C%E3%80%81%E9%A1%B9%E7%9B%AE%E6%8E%A5%E5%85%A5%E4%B8%8E%E5%9F%BA%E6%9C%AC%E4%BD%BF%E7%94%A8"><span class="nav-number">1.2.</span> <span class="nav-text">二、项目接入与基本使用</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#2-1-%E5%BC%95%E5%85%A5%E4%BE%9D%E8%B5%96"><span class="nav-number">1.2.1.</span> <span class="nav-text">2.1 引入依赖</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2-2-%E5%88%9B%E5%BB%BA-RedissonClient"><span class="nav-number">1.2.2.</span> <span class="nav-text">2.2 创建 RedissonClient</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2-3-%E5%9C%A8%E4%B8%80%E4%BA%BA%E4%B8%80%E5%8D%95%E4%B8%9A%E5%8A%A1%E4%B8%AD%E4%BD%BF%E7%94%A8-RLock"><span class="nav-number">1.2.3.</span> <span class="nav-text">2.3 在一人一单业务中使用 RLock</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%89%E3%80%81%E5%8F%AF%E9%87%8D%E5%85%A5%E9%94%81%E5%8E%9F%E7%90%86"><span class="nav-number">1.3.</span> <span class="nav-text">三、可重入锁原理</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#3-1-Hash-%E5%AD%98%E5%82%A8%E7%BB%93%E6%9E%84"><span class="nav-number">1.3.1.</span> <span class="nav-text">3.1 Hash 存储结构</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#3-2-%E8%8E%B7%E5%8F%96%E9%94%81%E6%B5%81%E7%A8%8B"><span class="nav-number">1.3.2.</span> <span class="nav-text">3.2 获取锁流程</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#3-3-%E9%87%8A%E6%94%BE%E9%94%81%E6%B5%81%E7%A8%8B"><span class="nav-number">1.3.3.</span> <span class="nav-text">3.3 释放锁流程</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%9B%9B%E3%80%81%E9%94%81%E9%87%8D%E8%AF%95%E4%B8%8E-WatchDog"><span class="nav-number">1.4.</span> <span class="nav-text">四、锁重试与 WatchDog</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#4-1-%E6%9C%89%E9%99%90%E7%AD%89%E5%BE%85%E4%B8%8E%E9%87%8D%E8%AF%95"><span class="nav-number">1.4.1.</span> <span class="nav-text">4.1 有限等待与重试</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#4-2-WatchDog-%E8%87%AA%E5%8A%A8%E7%BB%AD%E6%9C%9F"><span class="nav-number">1.4.2.</span> <span class="nav-text">4.2 WatchDog 自动续期</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#4-3-%E6%9C%AC%E6%AC%A1%E6%B5%81%E7%A8%8B%E5%9B%BE"><span class="nav-number">1.4.3.</span> <span class="nav-text">4.3 本次流程图</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BA%94%E3%80%81MultiLock-%E4%B8%8E%E4%B8%BB%E4%BB%8E%E4%B8%80%E8%87%B4%E6%80%A7%E9%A3%8E%E9%99%A9"><span class="nav-number">1.5.</span> <span class="nav-text">五、MultiLock 与主从一致性风险</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#5-1-%E5%8D%95%E4%B8%AA%E4%B8%BB%E4%BB%8E%E9%9B%86%E7%BE%A4%E4%B8%BA%E4%BB%80%E4%B9%88%E5%8F%AF%E8%83%BD%E4%B8%A2%E9%94%81"><span class="nav-number">1.5.1.</span> <span class="nav-text">5.1 单个主从集群为什么可能丢锁</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#5-2-MultiLock-%E7%9A%84%E7%BB%84%E5%90%88%E6%96%B9%E5%BC%8F"><span class="nav-number">1.5.2.</span> <span class="nav-text">5.2 MultiLock 的组合方式</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#5-3-%E4%BB%A3%E4%BB%B7%E4%B8%8E%E9%80%82%E7%94%A8%E8%BE%B9%E7%95%8C"><span class="nav-number">1.5.3.</span> <span class="nav-text">5.3 代价与适用边界</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%85%AD%E3%80%81%E4%BB%8A%E6%97%A5%E9%97%AE%E9%A2%98%E4%B8%8E%E6%B3%A8%E6%84%8F%E4%BA%8B%E9%A1%B9"><span class="nav-number">1.6.</span> <span class="nav-text">六、今日问题与注意事项</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#6-1-%E4%B8%A4%E4%B8%AA-RedissonClient-%E7%9A%84%E6%B3%A8%E5%85%A5%E6%AD%A7%E4%B9%89"><span class="nav-number">1.6.1.</span> <span class="nav-text">6.1 两个 RedissonClient 的注入歧义</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#6-2-%E6%98%BE%E5%BC%8F%E7%A7%9F%E7%BA%A6%E4%B8%8E-WatchDog-%E4%B8%8D%E8%A6%81%E6%B7%B7%E6%B7%86"><span class="nav-number">1.6.2.</span> <span class="nav-text">6.2 显式租约与 WatchDog 不要混淆</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BB%8A%E6%97%A5%E6%80%BB%E7%BB%93"><span class="nav-number">1.7.</span> <span class="nav-text">今日总结</span></a></li></ol></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="ZHX"
+      src="/images/avatar.jpeg">
+  <p class="site-author-name" itemprop="name">ZHX</p>
+  <div class="site-description" itemprop="description">记录编程学习、项目实战和踩坑笔记</div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">56</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+            <a href="/categories/">
+          
+        <span class="site-state-item-count">10</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+  </nav>
+</div>
+
+
+
+      </div>
+        <div class="back-to-top motion-element">
+          <i class="fa fa-arrow-up"></i>
+          <span>0%</span>
+        </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2026</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">ZHX</span>
+</div>
+  <div class="powered-by">由 <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Gemini</a> 强力驱动
+  </div>
+
+        
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/pisces.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+
+</body>
+</html>
