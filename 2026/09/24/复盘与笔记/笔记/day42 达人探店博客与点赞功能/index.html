@@ -1,0 +1,600 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 8.1.2">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/favicon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon.png">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/all.min.css">
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"www.blog-x.cc.cd","root":"/","scheme":"Gemini","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"always","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":false,"show_result":false,"style":null},"back2top":{"enable":true,"sidebar":true,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":false,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}}};
+  </script>
+
+  <meta name="description" content="day42 达人探店博客与点赞功能一、达人探店功能概述达人探店是黑马点评项目中的核心功能之一，用户可以发布探店笔记（博客），其他用户可以浏览、点赞、评论。本次主要实现以下内容：  探店笔记的查询（热门笔记分页、根据 ID 查询） 点赞功能（同一用户只能点赞一次，再次点击取消点赞） 点赞排行榜（展示最早点赞的 Top5 用户）  涉及的数据表：  tb_blog：探店笔记表，包含标题、内容、图片、点">
+<meta property="og:type" content="article">
+<meta property="og:title" content="day42 达人探店博客与点赞功能">
+<meta property="og:url" content="https://www.blog-x.cc.cd/2026/09/24/%E5%A4%8D%E7%9B%98%E4%B8%8E%E7%AC%94%E8%AE%B0/%E7%AC%94%E8%AE%B0/day42%20%E8%BE%BE%E4%BA%BA%E6%8E%A2%E5%BA%97%E5%8D%9A%E5%AE%A2%E4%B8%8E%E7%82%B9%E8%B5%9E%E5%8A%9F%E8%83%BD/index.html">
+<meta property="og:site_name" content="我的学习日记">
+<meta property="og:description" content="day42 达人探店博客与点赞功能一、达人探店功能概述达人探店是黑马点评项目中的核心功能之一，用户可以发布探店笔记（博客），其他用户可以浏览、点赞、评论。本次主要实现以下内容：  探店笔记的查询（热门笔记分页、根据 ID 查询） 点赞功能（同一用户只能点赞一次，再次点击取消点赞） 点赞排行榜（展示最早点赞的 Top5 用户）  涉及的数据表：  tb_blog：探店笔记表，包含标题、内容、图片、点">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2026-09-23T16:23:01.000Z">
+<meta property="article:modified_time" content="2026-09-23T16:27:28.677Z">
+<meta property="article:author" content="ZHX">
+<meta name="twitter:card" content="summary">
+
+<link rel="canonical" href="https://www.blog-x.cc.cd/2026/09/24/%E5%A4%8D%E7%9B%98%E4%B8%8E%E7%AC%94%E8%AE%B0/%E7%AC%94%E8%AE%B0/day42%20%E8%BE%BE%E4%BA%BA%E6%8E%A2%E5%BA%97%E5%8D%9A%E5%AE%A2%E4%B8%8E%E7%82%B9%E8%B5%9E%E5%8A%9F%E8%83%BD/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'zh-CN'
+  };
+</script>
+
+  <title>day42 达人探店博客与点赞功能 | 我的学习日记</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">我的学习日记</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="main-menu menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档<span class="badge">60</span></a>
+
+  </li>
+        <li class="menu-item menu-item-categories">
+
+    <a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分类<span class="badge">10</span></a>
+
+  </li>
+        <li class="menu-item menu-item-about">
+
+    <a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>关于</a>
+
+  </li>
+        <li class="menu-item menu-item-tags">
+
+    <a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签<span class="badge">0</span></a>
+
+  </li>
+  </ul>
+</nav>
+
+
+
+
+</div>
+    </header>
+
+    
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://www.blog-x.cc.cd/2026/09/24/%E5%A4%8D%E7%9B%98%E4%B8%8E%E7%AC%94%E8%AE%B0/%E7%AC%94%E8%AE%B0/day42%20%E8%BE%BE%E4%BA%BA%E6%8E%A2%E5%BA%97%E5%8D%9A%E5%AE%A2%E4%B8%8E%E7%82%B9%E8%B5%9E%E5%8A%9F%E8%83%BD/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.jpeg">
+      <meta itemprop="name" content="ZHX">
+      <meta itemprop="description" content="记录编程学习、项目实战和踩坑笔记">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="我的学习日记">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          day42 达人探店博客与点赞功能
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+              
+
+              <time title="创建时间：2026-09-24 00:23:01 / 修改时间：00:27:28" itemprop="dateCreated datePublished" datetime="2026-09-24T00:23:01+08:00">2026-09-24</time>
+            </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E7%AC%94%E8%AE%B0/" itemprop="url" rel="index"><span itemprop="name">笔记</span></a>
+                </span>
+                  ，
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E7%AC%94%E8%AE%B0/Redis/" itemprop="url" rel="index"><span itemprop="name">Redis</span></a>
+                </span>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+      <div class="post-body" itemprop="articleBody">
+
+        
+          <h1 id="day42-达人探店博客与点赞功能"><a href="#day42-达人探店博客与点赞功能" class="headerlink" title="day42 达人探店博客与点赞功能"></a>day42 达人探店博客与点赞功能</h1><h2 id="一、达人探店功能概述"><a href="#一、达人探店功能概述" class="headerlink" title="一、达人探店功能概述"></a>一、达人探店功能概述</h2><p>达人探店是黑马点评项目中的核心功能之一，用户可以发布探店笔记（博客），其他用户可以浏览、点赞、评论。本次主要实现以下内容：</p>
+<ul>
+<li>探店笔记的查询（热门笔记分页、根据 ID 查询）</li>
+<li>点赞功能（同一用户只能点赞一次，再次点击取消点赞）</li>
+<li>点赞排行榜（展示最早点赞的 Top5 用户）</li>
+</ul>
+<p>涉及的数据表：</p>
+<ul>
+<li><code>tb_blog</code>：探店笔记表，包含标题、内容、图片、点赞数、评论数等字段</li>
+<li><code>tb_user</code>：用户表，用于关联笔记作者信息</li>
+</ul>
+<hr>
+<h2 id="二、查询笔记接口"><a href="#二、查询笔记接口" class="headerlink" title="二、查询笔记接口"></a>二、查询笔记接口</h2><h3 id="2-1-Blog-实体类与非表字段"><a href="#2-1-Blog-实体类与非表字段" class="headerlink" title="2.1 Blog 实体类与非表字段"></a>2.1 Blog 实体类与非表字段</h3><p><code>Blog</code> 实体类对应数据库表 <code>tb_blog</code>，但其中有几个字段仅用于前端展示，数据库中并不存在，需要用 <code>@TableField(exist = false)</code> 标记。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@TableName(&quot;tb_blog&quot;)</span></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">class</span> <span class="title class_">Blog</span> <span class="keyword">implements</span> <span class="title class_">Serializable</span> &#123;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@TableId(value = &quot;id&quot;, type = IdType.AUTO)</span></span><br><span class="line">    <span class="keyword">private</span> Long id;</span><br><span class="line">    <span class="keyword">private</span> Long shopId;      <span class="comment">// 商户id</span></span><br><span class="line">    <span class="keyword">private</span> Long userId;      <span class="comment">// 用户id</span></span><br><span class="line"></span><br><span class="line">    <span class="meta">@TableField(exist = false)</span></span><br><span class="line">    <span class="keyword">private</span> String icon;      <span class="comment">// 用户头像（非数据库字段）</span></span><br><span class="line"></span><br><span class="line">    <span class="meta">@TableField(exist = false)</span></span><br><span class="line">    <span class="keyword">private</span> String name;      <span class="comment">// 用户姓名（非数据库字段）</span></span><br><span class="line"></span><br><span class="line">    <span class="meta">@TableField(exist = false)</span></span><br><span class="line">    <span class="keyword">private</span> Boolean isLike;   <span class="comment">// 当前用户是否点赞（非数据库字段）</span></span><br><span class="line"></span><br><span class="line">    <span class="keyword">private</span> String title;     <span class="comment">// 标题</span></span><br><span class="line">    <span class="keyword">private</span> String images;    <span class="comment">// 探店照片，多张以&quot;,&quot;隔开</span></span><br><span class="line">    <span class="keyword">private</span> String content;   <span class="comment">// 文字描述</span></span><br><span class="line">    <span class="keyword">private</span> Integer liked;    <span class="comment">// 点赞数量</span></span><br><span class="line">    <span class="keyword">private</span> Integer comments; <span class="comment">// 评论数量</span></span><br><span class="line">    <span class="keyword">private</span> LocalDateTime createTime;</span><br><span class="line">    <span class="keyword">private</span> LocalDateTime updateTime;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p><strong><code>@TableField(exist = false)</code> 的作用：</strong></p>
+<ul>
+<li>这是 MyBatis-Plus 提供的注解，用于标记实体类中的字段<strong>在数据库表中不存在</strong></li>
+<li>MyBatis-Plus 在生成 INSERT、UPDATE、SELECT 等 SQL 时会自动忽略该字段</li>
+<li>适用于仅用于业务展示、需要在查询后手动填充的字段</li>
+</ul>
+<h3 id="2-2-根据-ID-查询笔记"><a href="#2-2-根据-ID-查询笔记" class="headerlink" title="2.2 根据 ID 查询笔记"></a>2.2 根据 ID 查询笔记</h3><p>查询单条笔记时，除了从数据库获取 blog 本身，还需要关联查询作者信息（昵称、头像），并判断当前用户是否点赞。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@Override</span></span><br><span class="line"><span class="keyword">public</span> <span class="type">Result</span> <span class="title function_">quereBlogById</span><span class="params">(Long id)</span> &#123;</span><br><span class="line">    <span class="type">Blog</span> <span class="variable">blog</span> <span class="operator">=</span> getById(id);</span><br><span class="line">    <span class="keyword">if</span> (blog == <span class="literal">null</span>) &#123;</span><br><span class="line">        <span class="keyword">return</span> Result.fail(<span class="string">&quot;博客不存在&quot;</span>);</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="comment">// 查询作者信息，填充 name 和 icon</span></span><br><span class="line">    queueBlogUser(blog);</span><br><span class="line">    <span class="comment">// 判断当前用户是否点赞，填充 isLike</span></span><br><span class="line">    setIsLike(blog);</span><br><span class="line">    <span class="keyword">return</span> Result.ok(blog);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="keyword">private</span> <span class="type">void</span> <span class="title function_">queueBlogUser</span><span class="params">(Blog blog)</span> &#123;</span><br><span class="line">    <span class="type">Long</span> <span class="variable">userId</span> <span class="operator">=</span> blog.getUserId();</span><br><span class="line">    <span class="type">User</span> <span class="variable">user</span> <span class="operator">=</span> userService.getById(userId);</span><br><span class="line">    blog.setName(user.getNickName());</span><br><span class="line">    blog.setIcon(user.getIcon());</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h3 id="2-3-热门笔记分页查询"><a href="#2-3-热门笔记分页查询" class="headerlink" title="2.3 热门笔记分页查询"></a>2.3 热门笔记分页查询</h3><p>按点赞数倒序排列，分页返回热门笔记。每条笔记同样需要填充作者信息和点赞状态。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@Override</span></span><br><span class="line"><span class="keyword">public</span> <span class="type">Result</span> <span class="title function_">queryHotBlog</span><span class="params">(Integer current)</span> &#123;</span><br><span class="line">    <span class="type">Page</span>&lt;Blog&gt; <span class="variable">page</span> <span class="operator">=</span> query()</span><br><span class="line">            .orderByDesc(<span class="string">&quot;liked&quot;</span>)</span><br><span class="line">            .page(<span class="keyword">new</span> <span class="title class_">Page</span>&lt;&gt;(current, SystemConstants.MAX_PAGE_SIZE));</span><br><span class="line">    <span class="type">List</span>&lt;Blog&gt; <span class="variable">records</span> <span class="operator">=</span> page.getRecords();</span><br><span class="line">    records.forEach(blog -&gt; &#123;</span><br><span class="line">        queueBlogUser(blog);</span><br><span class="line">        setIsLike(blog);</span><br><span class="line">    &#125;);</span><br><span class="line">    <span class="keyword">return</span> Result.ok(records);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<hr>
+<h2 id="三、点赞功能"><a href="#三、点赞功能" class="headerlink" title="三、点赞功能"></a>三、点赞功能</h2><h3 id="3-1-需求分析"><a href="#3-1-需求分析" class="headerlink" title="3.1 需求分析"></a>3.1 需求分析</h3><ul>
+<li>同一个用户对同一篇笔记只能点赞一次，再次点击则取消点赞</li>
+<li>前端需要知道当前用户是否已经点赞（点赞按钮高亮显示）</li>
+<li>点赞数需要实时更新</li>
+</ul>
+<h3 id="3-2-基于-Redis-Set-的实现（初始版本）"><a href="#3-2-基于-Redis-Set-的实现（初始版本）" class="headerlink" title="3.2 基于 Redis Set 的实现（初始版本）"></a>3.2 基于 Redis Set 的实现（初始版本）</h3><p>使用 Redis 的 Set 集合存储每篇笔记的点赞用户 ID，利用 Set 的元素唯一性保证一人一赞。</p>
+<p><strong>核心逻辑：</strong></p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">用户点击点赞</span><br><span class="line">    ↓</span><br><span class="line">查 Redis Set 中是否存在该用户 ID</span><br><span class="line">    ├─ 不存在 → 数据库 liked + 1 → 将用户加入 Redis Set</span><br><span class="line">    └─ 已存在 → 数据库 liked - 1 → 从 Redis Set 中移除用户</span><br></pre></td></tr></table></figure>
+
+<p><strong>判断是否点赞：</strong></p>
+<p>查询笔记时，从 Redis Set 中判断当前用户是否存在，将结果写入 <code>isLike</code> 字段返回给前端。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">private</span> <span class="type">void</span> <span class="title function_">setIsLike</span><span class="params">(Blog blog)</span> &#123;</span><br><span class="line">    <span class="type">UserDTO</span> <span class="variable">user</span> <span class="operator">=</span> UserHolder.getUser();</span><br><span class="line">    <span class="keyword">if</span> (user == <span class="literal">null</span>) &#123;</span><br><span class="line">        <span class="keyword">return</span>;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="type">Long</span> <span class="variable">userId</span> <span class="operator">=</span> user.getId();</span><br><span class="line">    <span class="type">String</span> <span class="variable">key</span> <span class="operator">=</span> <span class="string">&quot;blog:like:&quot;</span> + blog.getId();</span><br><span class="line">    <span class="comment">// Set 方式：判断是否为成员</span></span><br><span class="line">    <span class="type">Boolean</span> <span class="variable">isMember</span> <span class="operator">=</span> stringRedisTemplate.opsForSet().isMember(key, userId.toString());</span><br><span class="line">    blog.setIsLike(BooleanUtil.isTrue(isMember));</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<blockquote>
+<p>Set 的缺点：元素无序，无法实现按点赞时间排序的排行榜功能。</p>
+</blockquote>
+<h3 id="3-3-基于-Redis-ZSet-的实现（升级版）"><a href="#3-3-基于-Redis-ZSet-的实现（升级版）" class="headerlink" title="3.3 基于 Redis ZSet 的实现（升级版）"></a>3.3 基于 Redis ZSet 的实现（升级版）</h3><p>为了实现点赞排行榜，将 Set 替换为 <strong>Sorted Set（ZSet）</strong>，用时间戳作为 score，既保留了元素唯一性，又能按时间排序。</p>
+<p><strong>核心代码：</strong></p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@Override</span></span><br><span class="line"><span class="keyword">public</span> <span class="type">Result</span> <span class="title function_">likeBlog</span><span class="params">(Long id)</span> &#123;</span><br><span class="line">    <span class="type">Long</span> <span class="variable">userId</span> <span class="operator">=</span> UserHolder.getUser().getId();</span><br><span class="line">    <span class="type">String</span> <span class="variable">key</span> <span class="operator">=</span> <span class="string">&quot;blog:like:&quot;</span> + id;</span><br><span class="line"></span><br><span class="line">    <span class="comment">// 判断是否已点赞：通过 score 是否为 null 判断</span></span><br><span class="line">    <span class="type">Double</span> <span class="variable">score</span> <span class="operator">=</span> stringRedisTemplate.opsForZSet().score(key, userId.toString());</span><br><span class="line"></span><br><span class="line">    <span class="keyword">if</span> (score == <span class="literal">null</span>) &#123;</span><br><span class="line">        <span class="comment">// 未点赞 → 点赞</span></span><br><span class="line">        update().setSql(<span class="string">&quot;liked = liked + 1&quot;</span>).eq(<span class="string">&quot;id&quot;</span>, id).update();</span><br><span class="line">        stringRedisTemplate.opsForZSet().add(key, userId.toString(), System.currentTimeMillis());</span><br><span class="line">    &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">        <span class="comment">// 已点赞 → 取消点赞</span></span><br><span class="line">        update().setSql(<span class="string">&quot;liked = liked - 1&quot;</span>).eq(<span class="string">&quot;id&quot;</span>, id).update();</span><br><span class="line">        stringRedisTemplate.opsForZSet().remove(key, userId.toString());</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">return</span> Result.ok();</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p><strong>ZSet 常用操作：</strong></p>
+<table>
+<thead>
+<tr>
+<th>操作</th>
+<th>命令 &#x2F; 方法</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>添加</td>
+<td><code>ZADD key score member</code> &#x2F; <code>opsForZSet().add()</code></td>
+<td>添加元素，score 为排序依据</td>
+</tr>
+<tr>
+<td>删除</td>
+<td><code>ZREM key member</code> &#x2F; <code>opsForZSet().remove()</code></td>
+<td>移除指定元素</td>
+</tr>
+<tr>
+<td>判断存在</td>
+<td><code>ZSCORE key member</code> &#x2F; <code>opsForZSet().score()</code></td>
+<td>返回分数，null 表示不存在</td>
+</tr>
+<tr>
+<td>按排名范围查</td>
+<td><code>ZRANGE key start stop</code> &#x2F; <code>opsForZSet().range()</code></td>
+<td>按 score 从小到大返回</td>
+</tr>
+</tbody></table>
+<hr>
+<h2 id="四、点赞排行榜"><a href="#四、点赞排行榜" class="headerlink" title="四、点赞排行榜"></a>四、点赞排行榜</h2><h3 id="4-1-需求与实现思路"><a href="#4-1-需求与实现思路" class="headerlink" title="4.1 需求与实现思路"></a>4.1 需求与实现思路</h3><p>在笔记详情页展示最早点赞的 Top5 用户，形成点赞排行榜。</p>
+<p>由于 ZSet 天然支持按 score 排序，使用 <code>ZRANGE key 0 4</code> 即可取出前 5 名（按时间戳从小到大，即最早点赞的 5 人）。</p>
+<h3 id="4-2-关键代码"><a href="#4-2-关键代码" class="headerlink" title="4.2 关键代码"></a>4.2 关键代码</h3><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@Override</span></span><br><span class="line"><span class="keyword">public</span> <span class="type">Result</span> <span class="title function_">quereBlogLikes</span><span class="params">(Long id)</span> &#123;</span><br><span class="line">    <span class="type">String</span> <span class="variable">key</span> <span class="operator">=</span> <span class="string">&quot;blog:like:&quot;</span> + id;</span><br><span class="line">    <span class="comment">// 取 ZSet 中前 5 名（score 最小的 5 个，即最早点赞）</span></span><br><span class="line">    <span class="type">Set</span>&lt;String&gt; <span class="variable">top5</span> <span class="operator">=</span> stringRedisTemplate.opsForZSet().range(key, <span class="number">0</span>, <span class="number">4</span>);</span><br><span class="line">    <span class="keyword">if</span> (top5 == <span class="literal">null</span> || top5.isEmpty()) &#123;</span><br><span class="line">        <span class="keyword">return</span> Result.ok(Collections.emptyList());</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="comment">// 转为 Long 类型的用户 ID 列表</span></span><br><span class="line">    <span class="type">List</span>&lt;Long&gt; <span class="variable">list</span> <span class="operator">=</span> top5.stream()</span><br><span class="line">            .map(Long::valueOf)</span><br><span class="line">            .collect(Collectors.toList());</span><br><span class="line">    <span class="comment">// 拼接成逗号分隔字符串，用于 ORDER BY FIELD</span></span><br><span class="line">    <span class="type">String</span> <span class="variable">listStr</span> <span class="operator">=</span> StrUtil.join(<span class="string">&quot;,&quot;</span>, list);</span><br><span class="line">    <span class="comment">// 根据用户 ID 列表查询，并保持 ZSet 中的顺序</span></span><br><span class="line">    <span class="type">List</span>&lt;UserDTO&gt; <span class="variable">userDTOS</span> <span class="operator">=</span> userService</span><br><span class="line">            .query().in(<span class="string">&quot;id&quot;</span>, list)</span><br><span class="line">            .last(<span class="string">&quot;order by FIELD(id, &quot;</span> + listStr + <span class="string">&quot;)&quot;</span>)</span><br><span class="line">            .list()</span><br><span class="line">            .stream()</span><br><span class="line">            .map(user -&gt; BeanUtil.copyProperties(user, UserDTO.class))</span><br><span class="line">            .collect(Collectors.toList());</span><br><span class="line">    <span class="keyword">return</span> Result.ok(userDTOS);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h3 id="4-3-MySQL-的-FIELD-函数保证排序"><a href="#4-3-MySQL-的-FIELD-函数保证排序" class="headerlink" title="4.3 MySQL 的 FIELD 函数保证排序"></a>4.3 MySQL 的 FIELD 函数保证排序</h3><p><code>WHERE id IN (5, 1, 3)</code> 查询出来的结果<strong>不会按 IN 列表中的顺序返回</strong>，MySQL 会按主键或索引的顺序返回。如果需要保持指定顺序，可以使用 <code>ORDER BY FIELD(id, 5, 1, 3)</code>。</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">SELECT</span> <span class="operator">*</span> <span class="keyword">FROM</span> tb_user</span><br><span class="line"><span class="keyword">WHERE</span> id <span class="keyword">IN</span> (<span class="number">5</span>, <span class="number">1</span>, <span class="number">3</span>)</span><br><span class="line"><span class="keyword">ORDER</span> <span class="keyword">BY</span> FIELD(id, <span class="number">5</span>, <span class="number">1</span>, <span class="number">3</span>);</span><br></pre></td></tr></table></figure>
+
+<p><code>FIELD(id, 5, 1, 3)</code> 的含义是：按照 id 在列表中的位置排序，id&#x3D;5 排第 1，id&#x3D;1 排第 2，id&#x3D;3 排第 3。</p>
+<blockquote>
+<p>注意：MyBatis-Plus 的 <code>listByIds()</code> 方法内部也是用 <code>IN</code> 查询，<strong>不保证结果顺序与入参一致</strong>，需要手动用 <code>FIELD</code> 排序。</p>
+</blockquote>
+<hr>
+<h2 id="五、点赞功能的深度思考"><a href="#五、点赞功能的深度思考" class="headerlink" title="五、点赞功能的深度思考"></a>五、点赞功能的深度思考</h2><h3 id="5-1-线程安全问题"><a href="#5-1-线程安全问题" class="headerlink" title="5.1 线程安全问题"></a>5.1 线程安全问题</h3><p>当前点赞逻辑存在经典的 <strong>check-then-act 竞态条件</strong>：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">判断是否点赞（查 Redis） → 操作数据库 → 更新 Redis</span><br></pre></td></tr></table></figure>
+
+<p>在高并发下，两个线程可能同时判断为”未点赞”，然后都执行点赞操作，导致<strong>一人多赞</strong>。</p>
+<p><strong>解决方案：</strong></p>
+<ol>
+<li><strong>Redis 原子操作</strong>：将”判断 + 添加”用一条原子命令完成。对于 Set 可以用 <code>SADD</code> 的返回值判断（返回 1 表示新增成功，返回 0 表示已存在）；对于 ZSet 可以用 <code>ZADD</code> 的 <code>NX</code> 选项（仅在不存在时添加）。整个点赞逻辑可以用 <strong>Lua 脚本</strong> 保证原子性。</li>
+<li><strong>数据库唯一索引</strong>：给 <code>(user_id, blog_id)</code> 建联合唯一索引，数据库层面兜底，重复插入直接报错。</li>
+<li><strong>分布式锁</strong>：以”用户 ID + 笔记 ID”为锁粒度，让同一用户对同一笔记的请求串行执行。但对于点赞这种高频操作，锁的开销较大，优先考虑 Redis 原子操作。</li>
+</ol>
+<h3 id="5-2-双向存储问题"><a href="#5-2-双向存储问题" class="headerlink" title="5.2 双向存储问题"></a>5.2 双向存储问题</h3><p>当前只存储了”某篇笔记被哪些用户赞过”（<code>blog:like:{blogId}</code> → 用户集合），方向是 <strong>blog → users</strong>。</p>
+<p>如果业务需要展示<strong>用户点赞过哪些笔记</strong>（用户的点赞历史），遍历所有笔记不现实，必须增加反向存储。</p>
+<p><strong>建议双向存储：</strong></p>
+<table>
+<thead>
+<tr>
+<th>方向</th>
+<th>Redis 结构</th>
+<th>Key</th>
+<th>Value &#x2F; Score</th>
+<th>用途</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>笔记 → 用户</td>
+<td>ZSet</td>
+<td><code>blog:like:{blogId}</code></td>
+<td>userId &#x2F; 点赞时间戳</td>
+<td>判断是否点赞、点赞排行榜</td>
+</tr>
+<tr>
+<td>用户 → 笔记</td>
+<td>ZSet</td>
+<td><code>user:like:{userId}</code></td>
+<td>blogId &#x2F; 点赞时间戳</td>
+<td>用户点赞历史、按时间分页</td>
+</tr>
+</tbody></table>
+<p>点赞和取消点赞时，<strong>两边要同时更新</strong>，建议用 Lua 脚本保证原子性，避免只更了一边导致数据不一致。</p>
+<h3 id="5-3-高并发下的数据库压力"><a href="#5-3-高并发下的数据库压力" class="headerlink" title="5.3 高并发下的数据库压力"></a>5.3 高并发下的数据库压力</h3><p>当前每次点赞都会同步修改数据库（<code>liked + 1</code> 或 <code>liked - 1</code>），并发很高时数据库压力会很大。有两种优化思路：</p>
+<p><strong>方案一：消息队列异步写数据库</strong></p>
+<ul>
+<li>将”更新数据库”的操作放入消息队列，后台线程异步消费执行</li>
+<li>优点：削峰填谷，数据库压力可控</li>
+<li>注意事项：<ul>
+<li>同一用户对同一笔记的消息需要按顺序消费（可用笔记 ID 做分区路由）</li>
+<li>消费端需要保证幂等性，防止重复消费</li>
+<li>数据存在短暂不一致（最终一致）</li>
+</ul>
+</li>
+</ul>
+<p><strong>方案二：Redis 维护点赞数 + 定时&#x2F;定量同步</strong></p>
+<ul>
+<li>Redis 中维护点赞计数（如用 Hash 或 String），点赞操作全部在 Redis 完成</li>
+<li>定时（如每 5 分钟）或定量（如每 100 次）将 Redis 中的数据同步到数据库</li>
+<li>优点：性能最好，读写都走 Redis</li>
+<li>注意事项：<ul>
+<li>判断点赞、更新计数、修改集合需要用 Lua 脚本保证原子性</li>
+<li>Redis 需要开启 AOF 持久化，降低宕机数据丢失风险</li>
+<li>数据库和 Redis 之间存在延迟，属于最终一致</li>
+</ul>
+</li>
+</ul>
+<blockquote>
+<p>对于点赞、计数这类读多写多、允许短暂不一致的场景，方案二是行业内的主流做法。</p>
+</blockquote>
+<hr>
+<h2 id="今日总结"><a href="#今日总结" class="headerlink" title="今日总结"></a>今日总结</h2><table>
+<thead>
+<tr>
+<th>模块</th>
+<th>核心要点</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>博客查询</td>
+<td><code>@TableField(exist = false)</code> 标记非数据库字段，查询后手动填充作者信息</td>
+</tr>
+<tr>
+<td>点赞功能</td>
+<td>Redis Set&#x2F;ZSet 存储点赞用户，判断存在性实现一人一赞，数据库维护点赞数</td>
+</tr>
+<tr>
+<td>点赞排行榜</td>
+<td>ZSet 存用户 ID + 时间戳，<code>ZRANGE</code> 取 TopN，<code>ORDER BY FIELD()</code> 保证 SQL 查询顺序</td>
+</tr>
+<tr>
+<td>FIELD 函数</td>
+<td>MySQL <code>FIELD()</code> 可让结果按指定顺序排列，解决 <code>IN</code> 查询顺序不一致问题</td>
+</tr>
+<tr>
+<td>线程安全</td>
+<td>check-then-act 有竞态条件；可用 Lua 脚本原子操作、唯一索引、分布式锁解决</td>
+</tr>
+<tr>
+<td>双向存储</td>
+<td>只存 blog→users 不够；需同时存 user→blogs，支持用户点赞历史查询</td>
+</tr>
+<tr>
+<td>高并发优化</td>
+<td>消息队列异步写库，或 Redis 主存 + 定时同步；后者是点赞场景的主流方案</td>
+</tr>
+</tbody></table>
+
+      </div>
+
+    
+    
+    
+
+      <footer class="post-footer">
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/2026/09/24/%E5%A4%8D%E7%9B%98%E4%B8%8E%E7%AC%94%E8%AE%B0/%E5%A4%8D%E7%9B%98/day42%20%E8%BE%BE%E4%BA%BA%E6%8E%A2%E5%BA%97%E5%8D%9A%E5%AE%A2%E4%B8%8E%E7%82%B9%E8%B5%9E%E5%8A%9F%E8%83%BD/" rel="prev" title="day42 达人探店博客与点赞功能">
+      <i class="fa fa-chevron-left"></i> day42 达人探店博客与点赞功能
+    </a></div>
+      <div class="post-nav-item"></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+
+
+          </div>
+          
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#day42-%E8%BE%BE%E4%BA%BA%E6%8E%A2%E5%BA%97%E5%8D%9A%E5%AE%A2%E4%B8%8E%E7%82%B9%E8%B5%9E%E5%8A%9F%E8%83%BD"><span class="nav-number">1.</span> <span class="nav-text">day42 达人探店博客与点赞功能</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%80%E3%80%81%E8%BE%BE%E4%BA%BA%E6%8E%A2%E5%BA%97%E5%8A%9F%E8%83%BD%E6%A6%82%E8%BF%B0"><span class="nav-number">1.1.</span> <span class="nav-text">一、达人探店功能概述</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BA%8C%E3%80%81%E6%9F%A5%E8%AF%A2%E7%AC%94%E8%AE%B0%E6%8E%A5%E5%8F%A3"><span class="nav-number">1.2.</span> <span class="nav-text">二、查询笔记接口</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#2-1-Blog-%E5%AE%9E%E4%BD%93%E7%B1%BB%E4%B8%8E%E9%9D%9E%E8%A1%A8%E5%AD%97%E6%AE%B5"><span class="nav-number">1.2.1.</span> <span class="nav-text">2.1 Blog 实体类与非表字段</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2-2-%E6%A0%B9%E6%8D%AE-ID-%E6%9F%A5%E8%AF%A2%E7%AC%94%E8%AE%B0"><span class="nav-number">1.2.2.</span> <span class="nav-text">2.2 根据 ID 查询笔记</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2-3-%E7%83%AD%E9%97%A8%E7%AC%94%E8%AE%B0%E5%88%86%E9%A1%B5%E6%9F%A5%E8%AF%A2"><span class="nav-number">1.2.3.</span> <span class="nav-text">2.3 热门笔记分页查询</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%89%E3%80%81%E7%82%B9%E8%B5%9E%E5%8A%9F%E8%83%BD"><span class="nav-number">1.3.</span> <span class="nav-text">三、点赞功能</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#3-1-%E9%9C%80%E6%B1%82%E5%88%86%E6%9E%90"><span class="nav-number">1.3.1.</span> <span class="nav-text">3.1 需求分析</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#3-2-%E5%9F%BA%E4%BA%8E-Redis-Set-%E7%9A%84%E5%AE%9E%E7%8E%B0%EF%BC%88%E5%88%9D%E5%A7%8B%E7%89%88%E6%9C%AC%EF%BC%89"><span class="nav-number">1.3.2.</span> <span class="nav-text">3.2 基于 Redis Set 的实现（初始版本）</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#3-3-%E5%9F%BA%E4%BA%8E-Redis-ZSet-%E7%9A%84%E5%AE%9E%E7%8E%B0%EF%BC%88%E5%8D%87%E7%BA%A7%E7%89%88%EF%BC%89"><span class="nav-number">1.3.3.</span> <span class="nav-text">3.3 基于 Redis ZSet 的实现（升级版）</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%9B%9B%E3%80%81%E7%82%B9%E8%B5%9E%E6%8E%92%E8%A1%8C%E6%A6%9C"><span class="nav-number">1.4.</span> <span class="nav-text">四、点赞排行榜</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#4-1-%E9%9C%80%E6%B1%82%E4%B8%8E%E5%AE%9E%E7%8E%B0%E6%80%9D%E8%B7%AF"><span class="nav-number">1.4.1.</span> <span class="nav-text">4.1 需求与实现思路</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#4-2-%E5%85%B3%E9%94%AE%E4%BB%A3%E7%A0%81"><span class="nav-number">1.4.2.</span> <span class="nav-text">4.2 关键代码</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#4-3-MySQL-%E7%9A%84-FIELD-%E5%87%BD%E6%95%B0%E4%BF%9D%E8%AF%81%E6%8E%92%E5%BA%8F"><span class="nav-number">1.4.3.</span> <span class="nav-text">4.3 MySQL 的 FIELD 函数保证排序</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BA%94%E3%80%81%E7%82%B9%E8%B5%9E%E5%8A%9F%E8%83%BD%E7%9A%84%E6%B7%B1%E5%BA%A6%E6%80%9D%E8%80%83"><span class="nav-number">1.5.</span> <span class="nav-text">五、点赞功能的深度思考</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#5-1-%E7%BA%BF%E7%A8%8B%E5%AE%89%E5%85%A8%E9%97%AE%E9%A2%98"><span class="nav-number">1.5.1.</span> <span class="nav-text">5.1 线程安全问题</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#5-2-%E5%8F%8C%E5%90%91%E5%AD%98%E5%82%A8%E9%97%AE%E9%A2%98"><span class="nav-number">1.5.2.</span> <span class="nav-text">5.2 双向存储问题</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#5-3-%E9%AB%98%E5%B9%B6%E5%8F%91%E4%B8%8B%E7%9A%84%E6%95%B0%E6%8D%AE%E5%BA%93%E5%8E%8B%E5%8A%9B"><span class="nav-number">1.5.3.</span> <span class="nav-text">5.3 高并发下的数据库压力</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BB%8A%E6%97%A5%E6%80%BB%E7%BB%93"><span class="nav-number">1.6.</span> <span class="nav-text">今日总结</span></a></li></ol></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="ZHX"
+      src="/images/avatar.jpeg">
+  <p class="site-author-name" itemprop="name">ZHX</p>
+  <div class="site-description" itemprop="description">记录编程学习、项目实战和踩坑笔记</div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">60</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+            <a href="/categories/">
+          
+        <span class="site-state-item-count">10</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+  </nav>
+</div>
+
+
+
+      </div>
+        <div class="back-to-top motion-element">
+          <i class="fa fa-arrow-up"></i>
+          <span>0%</span>
+        </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2026</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">ZHX</span>
+</div>
+  <div class="powered-by">由 <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Gemini</a> 强力驱动
+  </div>
+
+        
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/pisces.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+
+</body>
+</html>

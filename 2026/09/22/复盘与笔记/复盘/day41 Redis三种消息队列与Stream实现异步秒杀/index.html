@@ -1,0 +1,501 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 8.1.2">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/favicon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon.png">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/all.min.css">
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"www.blog-x.cc.cd","root":"/","scheme":"Gemini","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"always","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":false,"show_result":false,"style":null},"back2top":{"enable":true,"sidebar":true,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":false,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}}};
+  </script>
+
+  <meta name="description" content="1. 今天做了什么 学习 Redis 消息队列的三种实现方式：基于 List、基于 PubSub、基于 Stream 学习 Stream 消息队列的 XREAD 命令及其优缺点 学习 Stream 消费者组的概念、命令和解决的问题 基于 Redis Stream 消息队列实现异步秒杀下单  2. 核心知识点消息队列基础  消息队列（Message Queue）：存储和管理消息，也被称为消息代理 为">
+<meta property="og:type" content="article">
+<meta property="og:title" content="day41 Redis三种消息队列与Stream实现异步秒杀">
+<meta property="og:url" content="https://www.blog-x.cc.cd/2026/09/22/%E5%A4%8D%E7%9B%98%E4%B8%8E%E7%AC%94%E8%AE%B0/%E5%A4%8D%E7%9B%98/day41%20Redis%E4%B8%89%E7%A7%8D%E6%B6%88%E6%81%AF%E9%98%9F%E5%88%97%E4%B8%8EStream%E5%AE%9E%E7%8E%B0%E5%BC%82%E6%AD%A5%E7%A7%92%E6%9D%80/index.html">
+<meta property="og:site_name" content="我的学习日记">
+<meta property="og:description" content="1. 今天做了什么 学习 Redis 消息队列的三种实现方式：基于 List、基于 PubSub、基于 Stream 学习 Stream 消息队列的 XREAD 命令及其优缺点 学习 Stream 消费者组的概念、命令和解决的问题 基于 Redis Stream 消息队列实现异步秒杀下单  2. 核心知识点消息队列基础  消息队列（Message Queue）：存储和管理消息，也被称为消息代理 为">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://www.blog-x.cc.cd/assets/Pasted%20image%2020260921211315.png">
+<meta property="og:image" content="https://www.blog-x.cc.cd/assets/Pasted%20image%2020260921212935.png">
+<meta property="article:published_time" content="2026-09-22T13:00:00.000Z">
+<meta property="article:modified_time" content="2026-09-21T16:39:54.337Z">
+<meta property="article:author" content="ZHX">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://www.blog-x.cc.cd/assets/Pasted%20image%2020260921211315.png">
+
+<link rel="canonical" href="https://www.blog-x.cc.cd/2026/09/22/%E5%A4%8D%E7%9B%98%E4%B8%8E%E7%AC%94%E8%AE%B0/%E5%A4%8D%E7%9B%98/day41%20Redis%E4%B8%89%E7%A7%8D%E6%B6%88%E6%81%AF%E9%98%9F%E5%88%97%E4%B8%8EStream%E5%AE%9E%E7%8E%B0%E5%BC%82%E6%AD%A5%E7%A7%92%E6%9D%80/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'zh-CN'
+  };
+</script>
+
+  <title>day41 Redis三种消息队列与Stream实现异步秒杀 | 我的学习日记</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">我的学习日记</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="main-menu menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档<span class="badge">60</span></a>
+
+  </li>
+        <li class="menu-item menu-item-categories">
+
+    <a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分类<span class="badge">10</span></a>
+
+  </li>
+        <li class="menu-item menu-item-about">
+
+    <a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>关于</a>
+
+  </li>
+        <li class="menu-item menu-item-tags">
+
+    <a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签<span class="badge">0</span></a>
+
+  </li>
+  </ul>
+</nav>
+
+
+
+
+</div>
+    </header>
+
+    
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://www.blog-x.cc.cd/2026/09/22/%E5%A4%8D%E7%9B%98%E4%B8%8E%E7%AC%94%E8%AE%B0/%E5%A4%8D%E7%9B%98/day41%20Redis%E4%B8%89%E7%A7%8D%E6%B6%88%E6%81%AF%E9%98%9F%E5%88%97%E4%B8%8EStream%E5%AE%9E%E7%8E%B0%E5%BC%82%E6%AD%A5%E7%A7%92%E6%9D%80/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.jpeg">
+      <meta itemprop="name" content="ZHX">
+      <meta itemprop="description" content="记录编程学习、项目实战和踩坑笔记">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="我的学习日记">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          day41 Redis三种消息队列与Stream实现异步秒杀
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+              
+
+              <time title="创建时间：2026-09-22 21:00:00 / 修改时间：00:39:54" itemprop="dateCreated datePublished" datetime="2026-09-22T21:00:00+08:00">2026-09-22</time>
+            </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E5%A4%8D%E7%9B%98/" itemprop="url" rel="index"><span itemprop="name">复盘</span></a>
+                </span>
+                  ，
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E5%A4%8D%E7%9B%98/Redis/" itemprop="url" rel="index"><span itemprop="name">Redis</span></a>
+                </span>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+      <div class="post-body" itemprop="articleBody">
+
+        
+          <h2 id="1-今天做了什么"><a href="#1-今天做了什么" class="headerlink" title="1. 今天做了什么"></a>1. 今天做了什么</h2><ul>
+<li>学习 Redis 消息队列的三种实现方式：基于 List、基于 PubSub、基于 Stream</li>
+<li>学习 Stream 消息队列的 XREAD 命令及其优缺点</li>
+<li>学习 Stream 消费者组的概念、命令和解决的问题</li>
+<li>基于 Redis Stream 消息队列实现异步秒杀下单</li>
+</ul>
+<h2 id="2-核心知识点"><a href="#2-核心知识点" class="headerlink" title="2. 核心知识点"></a>2. 核心知识点</h2><p><strong>消息队列基础</strong></p>
+<ul>
+<li>消息队列（Message Queue）：存储和管理消息，也被称为消息代理</li>
+<li>为什么引入消息队列：<ul>
+<li>异步响应，提高速度</li>
+<li>高峰时期大量请求先加入消息队列，后端按自己的处理能力匀速消耗</li>
+</ul>
+</li>
+<li>消息队列的基本要求：<ol>
+<li>JVM 以外，不受 JVM 内存限制</li>
+<li>对数据进行持久化，保证数据安全</li>
+<li>保证消息有序性</li>
+<li>消费者需要对消息进行确认，确保消息至少被消费一次</li>
+</ol>
+</li>
+<li>主流中间件有 RabbitMQ 等，这里使用 Redis 实现（3 种方式，了解即可）</li>
+</ul>
+<p><strong>方式一：基于 List 模拟</strong></p>
+<ul>
+<li>利用 BLPOP、BRPOP 来取数据，才具有阻塞效果</li>
+<li>优点：基本满足前 3 条（存储在 Redis，可以持久化，list 是有序的）</li>
+<li>缺点：<ul>
+<li>无法避免消息丢失，不满足第 4 条</li>
+<li>只支持单消费者</li>
+</ul>
+</li>
+</ul>
+<p><strong>方式二：基于 PubSub（发布订阅）</strong></p>
+<ul>
+<li>Redis 发布订阅命令：<ol>
+<li><code>PUBLISH channel message</code>：将信息发送到指定的频道</li>
+<li><code>PSUBSCRIBE pattern [pattern ...]</code>：订阅一个或多个符合给定模式的频道</li>
+<li><code>SUBSCRIBE channel [channel ...]</code>：订阅给定的一个或多个频道的信息</li>
+</ol>
+</li>
+<li>优点：采用发布订阅，支持多生产多消费者</li>
+<li>缺点：无法保证数据安全<ul>
+<li>不支持持久化，无人订阅则丢失</li>
+<li>无法避免消息丢失</li>
+<li>消费者的消息堆积有上限，超出则丢失</li>
+</ul>
+</li>
+</ul>
+<p><strong>方式三：基于 Stream 消息队列</strong></p>
+<ul>
+<li>发送与接收的命令（见截图）</li>
+</ul>
+<p><img src="/assets/Pasted%20image%2020260921211315.png" alt="发送与接收方法"></p>
+<p><img src="/assets/Pasted%20image%2020260921212935.png" alt="XREAD命令"></p>
+<ul>
+<li>XREAD 命令读取优缺点：<ul>
+<li>消息永久保存，可回溯</li>
+<li>可阻塞读取</li>
+<li>有漏读问题（$ 读取最新消息，如果处理一个消息过程中有消息到来则会漏读）</li>
+</ul>
+</li>
+</ul>
+<p><strong>Stream 消费者组</strong></p>
+<ul>
+<li>消费者组可以解决 XREAD 漏读的问题</li>
+</ul>
+<p>创建消费者组：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">XGROUP CREATE key groupName ID [MKSTREAM]</span><br><span class="line"></span><br><span class="line">- key: 队列名称</span><br><span class="line">- groupName: 消费者组名称</span><br><span class="line">- ID: 起始ID标示，$代表队列中最后一个消息，0则代表队列中第一个消息</span><br><span class="line">- MKSTREAM: 队列不存在时自动创建队列</span><br></pre></td></tr></table></figure>
+
+<p>其它常见命令：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"># 删除指定的消费者组</span><br><span class="line">XGROUP DESTORY key groupName</span><br><span class="line"></span><br><span class="line"># 给指定的消费者组添加消费者</span><br><span class="line">XGROUP CREATECONSUMER key groupname consumername</span><br><span class="line"></span><br><span class="line"># 删除消费者组中的指定消费者</span><br><span class="line">XGROUP DELCONSUMER key groupname consumername</span><br></pre></td></tr></table></figure>
+
+<p>从消费者组读取消息：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">XREADGROUP GROUP group consumer [COUNT count] [BLOCK milliseconds] [NOACK] STREAMS key [key ...] ID [ID ...]</span><br><span class="line"></span><br><span class="line">- group: 消费组名称</span><br><span class="line">- consumer: 消费者名称，如果消费者不存在，会自动创建一个消费者</span><br><span class="line">- count: 本次查询的最大数量</span><br><span class="line">- BLOCK milliseconds: 当没有消息时最长等待时间</span><br><span class="line">- NOACK: 无需手动ACK，获取到消息后自动确认</span><br><span class="line">- STREAMS key: 指定队列名称</span><br><span class="line">- ID: 获取消息的起始ID:</span><br><span class="line">  - &quot;&gt;&quot;: 从下一个未消费的消息开始</span><br><span class="line">  - 其它: 根据指定id从pending-list中获取已消费但未确认的消息，例如0，是从pending-list中的第一个消息开始</span><br></pre></td></tr></table></figure>
+
+<p>消费者组解决了：</p>
+<ol>
+<li>漏读问题，可以设置 “&gt;” 从下一个未消费的消息开始</li>
+<li>确认机制，未确认的消息保存在 pending-list，确保每个消息都被确认，防止消费者处理时异常导致消息丢失</li>
+<li>一个消费者组中的消费者消费同一队列，可以提高效率</li>
+<li>设置多个消费者组，可以实现多消费</li>
+</ol>
+<p><strong>实际选型建议</strong></p>
+<ol>
+<li>在实际开发中，list 与 PubSub 实现的消息队列缺点过多，不考虑</li>
+<li>简单业务需求可以使用 Redis 的 Stream 消息队列</li>
+<li>复杂场景，有复杂需求，还是要使用专业的中间件，如 RabbitMQ</li>
+</ol>
+<h2 id="3-深度思考"><a href="#3-深度思考" class="headerlink" title="3. 深度思考"></a>3. 深度思考</h2><h2 id="4-踩过的坑"><a href="#4-踩过的坑" class="headerlink" title="4. 踩过的坑"></a>4. 踩过的坑</h2><h2 id="5-遗留问题-想不通"><a href="#5-遗留问题-想不通" class="headerlink" title="5. 遗留问题 &#x2F; 想不通"></a>5. 遗留问题 &#x2F; 想不通</h2>
+      </div>
+
+    
+    
+    
+
+      <footer class="post-footer">
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/2026/09/20/%E5%A4%8D%E7%9B%98%E4%B8%8E%E7%AC%94%E8%AE%B0/%E7%AC%94%E8%AE%B0/day40%20Redis%E7%A7%92%E6%9D%80%E4%BC%98%E5%8C%96%E4%B8%8E%E9%98%BB%E5%A1%9E%E9%98%9F%E5%88%97%E5%BC%82%E6%AD%A5%E4%B8%8B%E5%8D%95/" rel="prev" title="day40 Redis秒杀优化与阻塞队列异步下单">
+      <i class="fa fa-chevron-left"></i> day40 Redis秒杀优化与阻塞队列异步下单
+    </a></div>
+      <div class="post-nav-item">
+    <a href="/2026/09/22/%E5%A4%8D%E7%9B%98%E4%B8%8E%E7%AC%94%E8%AE%B0/%E7%AC%94%E8%AE%B0/day41%20Redis%E4%B8%89%E7%A7%8D%E6%B6%88%E6%81%AF%E9%98%9F%E5%88%97%E4%B8%8EStream%E5%AE%9E%E7%8E%B0%E5%BC%82%E6%AD%A5%E7%A7%92%E6%9D%80/" rel="next" title="day41 Redis三种消息队列与Stream实现异步秒杀">
+      day41 Redis三种消息队列与Stream实现异步秒杀 <i class="fa fa-chevron-right"></i>
+    </a></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+
+
+          </div>
+          
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#1-%E4%BB%8A%E5%A4%A9%E5%81%9A%E4%BA%86%E4%BB%80%E4%B9%88"><span class="nav-number">1.</span> <span class="nav-text">1. 今天做了什么</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#2-%E6%A0%B8%E5%BF%83%E7%9F%A5%E8%AF%86%E7%82%B9"><span class="nav-number">2.</span> <span class="nav-text">2. 核心知识点</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#3-%E6%B7%B1%E5%BA%A6%E6%80%9D%E8%80%83"><span class="nav-number">3.</span> <span class="nav-text">3. 深度思考</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#4-%E8%B8%A9%E8%BF%87%E7%9A%84%E5%9D%91"><span class="nav-number">4.</span> <span class="nav-text">4. 踩过的坑</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#5-%E9%81%97%E7%95%99%E9%97%AE%E9%A2%98-%E6%83%B3%E4%B8%8D%E9%80%9A"><span class="nav-number">5.</span> <span class="nav-text">5. 遗留问题 &#x2F; 想不通</span></a></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="ZHX"
+      src="/images/avatar.jpeg">
+  <p class="site-author-name" itemprop="name">ZHX</p>
+  <div class="site-description" itemprop="description">记录编程学习、项目实战和踩坑笔记</div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">60</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+            <a href="/categories/">
+          
+        <span class="site-state-item-count">10</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+  </nav>
+</div>
+
+
+
+      </div>
+        <div class="back-to-top motion-element">
+          <i class="fa fa-arrow-up"></i>
+          <span>0%</span>
+        </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2026</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">ZHX</span>
+</div>
+  <div class="powered-by">由 <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Gemini</a> 强力驱动
+  </div>
+
+        
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/pisces.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+
+</body>
+</html>
