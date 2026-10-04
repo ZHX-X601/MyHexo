@@ -1,0 +1,677 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 8.1.2">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/favicon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon.png">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/all.min.css">
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"www.blog-x.cc.cd","root":"/","scheme":"Gemini","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"always","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":false,"show_result":false,"style":null},"back2top":{"enable":true,"sidebar":true,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":false,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}}};
+  </script>
+
+  <meta name="description" content="day43 用户关注、共同关注与关注推送Feed流一、今日功能概述今天围绕黑马点评的社交功能模块，实现了三个核心功能：  关注与取消关注：用户之间的多对多关注关系，基于数据库表 tb_follow 实现增删查 共同关注：查看当前用户与目标用户共同关注的博主，使用 Redis Set 的 SINTER 命令求交集 关注推送（Feed 流）：博主发布探店笔记后，主动推送到粉丝的收件箱，使用 Redis">
+<meta property="og:type" content="article">
+<meta property="og:title" content="day43 用户关注、共同关注与关注推送Feed流">
+<meta property="og:url" content="https://www.blog-x.cc.cd/2026/09/25/%E5%A4%8D%E7%9B%98%E4%B8%8E%E7%AC%94%E8%AE%B0/%E7%AC%94%E8%AE%B0/day43%20%E7%94%A8%E6%88%B7%E5%85%B3%E6%B3%A8%E3%80%81%E5%85%B1%E5%90%8C%E5%85%B3%E6%B3%A8%E4%B8%8E%E5%85%B3%E6%B3%A8%E6%8E%A8%E9%80%81Feed%E6%B5%81/index.html">
+<meta property="og:site_name" content="我的学习日记">
+<meta property="og:description" content="day43 用户关注、共同关注与关注推送Feed流一、今日功能概述今天围绕黑马点评的社交功能模块，实现了三个核心功能：  关注与取消关注：用户之间的多对多关注关系，基于数据库表 tb_follow 实现增删查 共同关注：查看当前用户与目标用户共同关注的博主，使用 Redis Set 的 SINTER 命令求交集 关注推送（Feed 流）：博主发布探店笔记后，主动推送到粉丝的收件箱，使用 Redis">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2026-09-24T16:40:31.000Z">
+<meta property="article:modified_time" content="2026-09-24T16:47:09.453Z">
+<meta property="article:author" content="ZHX">
+<meta name="twitter:card" content="summary">
+
+<link rel="canonical" href="https://www.blog-x.cc.cd/2026/09/25/%E5%A4%8D%E7%9B%98%E4%B8%8E%E7%AC%94%E8%AE%B0/%E7%AC%94%E8%AE%B0/day43%20%E7%94%A8%E6%88%B7%E5%85%B3%E6%B3%A8%E3%80%81%E5%85%B1%E5%90%8C%E5%85%B3%E6%B3%A8%E4%B8%8E%E5%85%B3%E6%B3%A8%E6%8E%A8%E9%80%81Feed%E6%B5%81/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'zh-CN'
+  };
+</script>
+
+  <title>day43 用户关注、共同关注与关注推送Feed流 | 我的学习日记</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">我的学习日记</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="main-menu menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档<span class="badge">66</span></a>
+
+  </li>
+        <li class="menu-item menu-item-categories">
+
+    <a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分类<span class="badge">12</span></a>
+
+  </li>
+        <li class="menu-item menu-item-about">
+
+    <a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>关于</a>
+
+  </li>
+        <li class="menu-item menu-item-tags">
+
+    <a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签<span class="badge">0</span></a>
+
+  </li>
+  </ul>
+</nav>
+
+
+
+
+</div>
+    </header>
+
+    
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://www.blog-x.cc.cd/2026/09/25/%E5%A4%8D%E7%9B%98%E4%B8%8E%E7%AC%94%E8%AE%B0/%E7%AC%94%E8%AE%B0/day43%20%E7%94%A8%E6%88%B7%E5%85%B3%E6%B3%A8%E3%80%81%E5%85%B1%E5%90%8C%E5%85%B3%E6%B3%A8%E4%B8%8E%E5%85%B3%E6%B3%A8%E6%8E%A8%E9%80%81Feed%E6%B5%81/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.jpeg">
+      <meta itemprop="name" content="ZHX">
+      <meta itemprop="description" content="记录编程学习、项目实战和踩坑笔记">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="我的学习日记">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          day43 用户关注、共同关注与关注推送Feed流
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+              
+
+              <time title="创建时间：2026-09-25 00:40:31 / 修改时间：00:47:09" itemprop="dateCreated datePublished" datetime="2026-09-25T00:40:31+08:00">2026-09-25</time>
+            </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E7%AC%94%E8%AE%B0/" itemprop="url" rel="index"><span itemprop="name">笔记</span></a>
+                </span>
+                  ，
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E7%AC%94%E8%AE%B0/Redis/" itemprop="url" rel="index"><span itemprop="name">Redis</span></a>
+                </span>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+      <div class="post-body" itemprop="articleBody">
+
+        
+          <h1 id="day43-用户关注、共同关注与关注推送Feed流"><a href="#day43-用户关注、共同关注与关注推送Feed流" class="headerlink" title="day43 用户关注、共同关注与关注推送Feed流"></a>day43 用户关注、共同关注与关注推送Feed流</h1><h2 id="一、今日功能概述"><a href="#一、今日功能概述" class="headerlink" title="一、今日功能概述"></a>一、今日功能概述</h2><p>今天围绕黑马点评的社交功能模块，实现了三个核心功能：</p>
+<ol>
+<li><strong>关注与取消关注</strong>：用户之间的多对多关注关系，基于数据库表 <code>tb_follow</code> 实现增删查</li>
+<li><strong>共同关注</strong>：查看当前用户与目标用户共同关注的博主，使用 Redis Set 的 <code>SINTER</code> 命令求交集</li>
+<li><strong>关注推送（Feed 流）</strong>：博主发布探店笔记后，主动推送到粉丝的收件箱，使用 Redis ZSet 存储，配合滚动分页查询</li>
+</ol>
+<p>涉及的核心数据表与 Redis 结构：</p>
+<table>
+<thead>
+<tr>
+<th>类型</th>
+<th>名称</th>
+<th>作用</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>MySQL 表</td>
+<td><code>tb_follow</code></td>
+<td>存储用户关注关系（user_id、follow_user_id）</td>
+</tr>
+<tr>
+<td>MySQL 表</td>
+<td><code>tb_blog</code></td>
+<td>存储探店笔记</td>
+</tr>
+<tr>
+<td>Redis Set</td>
+<td><code>follows:{userId}</code></td>
+<td>存储用户的关注列表，用于共同关注</td>
+</tr>
+<tr>
+<td>Redis ZSet</td>
+<td><code>feed:{userId}</code></td>
+<td>用户的收件箱，score 为时间戳，value 为博客 id</td>
+</tr>
+</tbody></table>
+<hr>
+<h2 id="二、关注与取消关注"><a href="#二、关注与取消关注" class="headerlink" title="二、关注与取消关注"></a>二、关注与取消关注</h2><h3 id="2-1-需求与数据模型"><a href="#2-1-需求与数据模型" class="headerlink" title="2.1 需求与数据模型"></a>2.1 需求与数据模型</h3><p>用户可以关注其他用户（博主），也可以取消关注。关注关系是<strong>多对多</strong>的：一个用户可以关注多个人，一个人也可以被多个用户关注。</p>
+<p><code>tb_follow</code> 表结构：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@TableName(&quot;tb_follow&quot;)</span></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">class</span> <span class="title class_">Follow</span> <span class="keyword">implements</span> <span class="title class_">Serializable</span> &#123;</span><br><span class="line">    <span class="meta">@TableId(value = &quot;id&quot;, type = IdType.AUTO)</span></span><br><span class="line">    <span class="keyword">private</span> Long id;           <span class="comment">// 主键</span></span><br><span class="line">    <span class="keyword">private</span> Long userId;       <span class="comment">// 用户id（粉丝）</span></span><br><span class="line">    <span class="keyword">private</span> Long followUserId; <span class="comment">// 关联的用户id（被关注者）</span></span><br><span class="line">    <span class="keyword">private</span> LocalDateTime createTime;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h3 id="2-2-接口设计"><a href="#2-2-接口设计" class="headerlink" title="2.2 接口设计"></a>2.2 接口设计</h3><p><code>FollowController</code> 提供三个接口：</p>
+<table>
+<thead>
+<tr>
+<th>接口</th>
+<th>方法</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>PUT /follow/{id}/{isFollow}</code></td>
+<td><code>follow()</code></td>
+<td>关注或取消关注</td>
+</tr>
+<tr>
+<td><code>GET /follow/or/not/{id}</code></td>
+<td><code>isFollow()</code></td>
+<td>判断当前用户是否关注了某人</td>
+</tr>
+<tr>
+<td><code>GET /follow/common/{id}</code></td>
+<td><code>followCommons()</code></td>
+<td>查询共同关注</td>
+</tr>
+</tbody></table>
+<h3 id="2-3-关注与取消关注的实现"><a href="#2-3-关注与取消关注的实现" class="headerlink" title="2.3 关注与取消关注的实现"></a>2.3 关注与取消关注的实现</h3><p>关注操作同时写数据库和 Redis Set，取关则同时删除。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@Override</span></span><br><span class="line"><span class="keyword">public</span> <span class="type">Result</span> <span class="title function_">follow</span><span class="params">(Long followUserId, Boolean isFollow)</span> &#123;</span><br><span class="line">    <span class="type">Long</span> <span class="variable">userId</span> <span class="operator">=</span> UserHolder.getUser().getId();</span><br><span class="line">    <span class="type">String</span> <span class="variable">key</span> <span class="operator">=</span> <span class="string">&quot;follows:&quot;</span> + userId;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">if</span> (isFollow) &#123;</span><br><span class="line">        <span class="comment">// 关注：新增数据库记录</span></span><br><span class="line">        <span class="type">Follow</span> <span class="variable">follow</span> <span class="operator">=</span> <span class="keyword">new</span> <span class="title class_">Follow</span>();</span><br><span class="line">        follow.setUserId(userId);</span><br><span class="line">        follow.setFollowUserId(followUserId);</span><br><span class="line">        <span class="type">boolean</span> <span class="variable">isSuccess</span> <span class="operator">=</span> save(follow);</span><br><span class="line">        <span class="keyword">if</span> (isSuccess) &#123;</span><br><span class="line">            <span class="comment">// 同步写入 Redis Set</span></span><br><span class="line">            stringRedisTemplate.opsForSet().add(key, followUserId.toString());</span><br><span class="line">        &#125;</span><br><span class="line">    &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">        <span class="comment">// 取关：删除数据库记录</span></span><br><span class="line">        <span class="type">boolean</span> <span class="variable">isSuccess</span> <span class="operator">=</span> remove(<span class="keyword">new</span> <span class="title class_">QueryWrapper</span>&lt;Follow&gt;()</span><br><span class="line">                .eq(<span class="string">&quot;user_id&quot;</span>, userId).eq(<span class="string">&quot;follow_user_id&quot;</span>, followUserId));</span><br><span class="line">        <span class="keyword">if</span> (isSuccess) &#123;</span><br><span class="line">            <span class="comment">// 同步从 Redis Set 中移除</span></span><br><span class="line">            stringRedisTemplate.opsForSet().remove(key, followUserId.toString());</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">return</span> Result.ok();</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h3 id="2-4-判断是否关注"><a href="#2-4-判断是否关注" class="headerlink" title="2.4 判断是否关注"></a>2.4 判断是否关注</h3><p>查询数据库中是否存在对应记录即可：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@Override</span></span><br><span class="line"><span class="keyword">public</span> <span class="type">Result</span> <span class="title function_">isFollow</span><span class="params">(Long followUserId)</span> &#123;</span><br><span class="line">    <span class="type">Long</span> <span class="variable">userId</span> <span class="operator">=</span> UserHolder.getUser().getId();</span><br><span class="line">    <span class="type">Integer</span> <span class="variable">count</span> <span class="operator">=</span> query()</span><br><span class="line">            .eq(<span class="string">&quot;user_id&quot;</span>, userId)</span><br><span class="line">            .eq(<span class="string">&quot;follow_user_id&quot;</span>, followUserId)</span><br><span class="line">            .count();</span><br><span class="line">    <span class="keyword">return</span> Result.ok(count &gt; <span class="number">0</span>);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<blockquote>
+<p>注意：这里判断是否关注走的是数据库查询，而不是 Redis。因为 <code>isFollow</code> 通常在查看他人主页时调用，频率不算特别高；而关注列表写入 Redis 主要是为了共同关注的交集计算。</p>
+</blockquote>
+<hr>
+<h2 id="三、共同关注"><a href="#三、共同关注" class="headerlink" title="三、共同关注"></a>三、共同关注</h2><h3 id="3-1-需求与实现思路"><a href="#3-1-需求与实现思路" class="headerlink" title="3.1 需求与实现思路"></a>3.1 需求与实现思路</h3><p>进入某个博主的主页时，可以查看”我和 TA 共同关注的人”，即求当前登录用户和目标用户的关注列表的交集。</p>
+<p>如果纯用数据库实现，需要两次查询各自的关注列表，然后在内存中求交集，效率较低。使用 Redis Set 的 <strong><code>SINTER</code> 命令</strong>可以直接在 Redis 中完成交集运算，非常高效。</p>
+<h3 id="3-2-核心代码"><a href="#3-2-核心代码" class="headerlink" title="3.2 核心代码"></a>3.2 核心代码</h3><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@Override</span></span><br><span class="line"><span class="keyword">public</span> <span class="type">Result</span> <span class="title function_">followCommons</span><span class="params">(Long id)</span> &#123;</span><br><span class="line">    <span class="comment">// 1. 获取当前用户和目标用户的关注集合 key</span></span><br><span class="line">    <span class="type">Long</span> <span class="variable">userId</span> <span class="operator">=</span> UserHolder.getUser().getId();</span><br><span class="line">    <span class="type">String</span> <span class="variable">key</span> <span class="operator">=</span> <span class="string">&quot;follows:&quot;</span> + userId;</span><br><span class="line">    <span class="type">String</span> <span class="variable">key2</span> <span class="operator">=</span> <span class="string">&quot;follows:&quot;</span> + id;</span><br><span class="line"></span><br><span class="line">    <span class="comment">// 2. 求两个 Set 的交集</span></span><br><span class="line">    <span class="type">Set</span>&lt;String&gt; <span class="variable">intersect</span> <span class="operator">=</span> stringRedisTemplate.opsForSet().intersect(key, key2);</span><br><span class="line">    <span class="keyword">if</span> (intersect == <span class="literal">null</span> || intersect.isEmpty()) &#123;</span><br><span class="line">        <span class="keyword">return</span> Result.ok(Collections.emptyList());</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="comment">// 3. 解析 id 集合</span></span><br><span class="line">    <span class="type">List</span>&lt;Long&gt; <span class="variable">ids</span> <span class="operator">=</span> intersect.stream()</span><br><span class="line">            .map(Long::valueOf)</span><br><span class="line">            .collect(Collectors.toList());</span><br><span class="line"></span><br><span class="line">    <span class="comment">// 4. 查询用户信息并返回</span></span><br><span class="line">    <span class="type">List</span>&lt;UserDTO&gt; <span class="variable">users</span> <span class="operator">=</span> userService.listByIds(ids)</span><br><span class="line">            .stream()</span><br><span class="line">            .map(user -&gt; BeanUtil.copyProperties(user, UserDTO.class))</span><br><span class="line">            .collect(Collectors.toList());</span><br><span class="line">    <span class="keyword">return</span> Result.ok(users);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h3 id="3-3-Redis-Set-交集相关命令"><a href="#3-3-Redis-Set-交集相关命令" class="headerlink" title="3.3 Redis Set 交集相关命令"></a>3.3 Redis Set 交集相关命令</h3><table>
+<thead>
+<tr>
+<th>命令</th>
+<th>作用</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>SINTER key1 key2</code></td>
+<td>返回两个集合的交集</td>
+</tr>
+<tr>
+<td><code>SINTERSTORE dest key1 key2</code></td>
+<td>将交集结果存入 dest 集合</td>
+</tr>
+<tr>
+<td><code>SUNION key1 key2</code></td>
+<td>返回并集</td>
+</tr>
+<tr>
+<td><code>SDIFF key1 key2</code></td>
+<td>返回差集（key1 有但 key2 没有）</td>
+</tr>
+</tbody></table>
+<p>Java 中对应的方法：<code>opsForSet().intersect(key, otherKey)</code></p>
+<h3 id="3-4-关于方案的思考"><a href="#3-4-关于方案的思考" class="headerlink" title="3.4 关于方案的思考"></a>3.4 关于方案的思考</h3><blockquote>
+<p>这个功能使用 Redis Set 更多是为了学习 Redis 的使用场景，从业务角度看并非最优方案：</p>
+<ol>
+<li><strong>不是热点功能</strong>：共同关注的查询频率远低于点赞、浏览等操作，性能压力不大</li>
+<li><strong>全量缓存不现实</strong>：如果所有用户的关注列表都常驻 Redis，数据量会很大，且大部分是冷数据</li>
+</ol>
+</blockquote>
+<hr>
+<h2 id="四、关注推送-—-Feed-流"><a href="#四、关注推送-—-Feed-流" class="headerlink" title="四、关注推送 — Feed 流"></a>四、关注推送 — Feed 流</h2><h3 id="4-1-什么是-Feed-流"><a href="#4-1-什么是-Feed-流" class="headerlink" title="4.1 什么是 Feed 流"></a>4.1 什么是 Feed 流</h3><p>Feed 流（Feed Stream）就是”关注的人发的动态”，典型场景如微博首页、朋友圈、抖音推荐。用户打开 App 时，能看到自己关注的博主发布的内容，按时间排序展示。</p>
+<p>Feed 流的排序模式主要有两种：</p>
+<ul>
+<li><strong>时间排序</strong>：按发布时间倒序排列，简单直接，适合关注数量不多的场景</li>
+<li><strong>智能推荐</strong>：根据算法推荐可能感兴趣的内容，实现复杂</li>
+</ul>
+<p>本次实现采用<strong>时间排序</strong>。</p>
+<h3 id="4-2-三种实现方案对比"><a href="#4-2-三种实现方案对比" class="headerlink" title="4.2 三种实现方案对比"></a>4.2 三种实现方案对比</h3><p>按时间排序的 Feed 流，根据数据流向分为三种实现方案：</p>
+<table>
+<thead>
+<tr>
+<th>方案</th>
+<th>原理</th>
+<th>优点</th>
+<th>缺点</th>
+<th>适用场景</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>拉模式</strong>（读扩散）</td>
+<td>博主发文存入发件箱，粉丝查看时拉取所有关注的发件箱并合并排序</td>
+<td>节省空间，博主发文只需写一份</td>
+<td>粉丝读取慢，需要遍历所有关注的人的发件箱</td>
+<td>大博主（粉丝极多）、普通用户关注数少</td>
+</tr>
+<tr>
+<td><strong>推模式</strong>（写扩散）</td>
+<td>博主发文时，直接写入所有粉丝的收件箱，粉丝查看时直接读自己的收件箱</td>
+<td>粉丝读取速度极快，只需查自己的收件箱</td>
+<td>博主发文开销大，大 V 有几百万粉丝时写放大严重；存储空间大</td>
+<td>小博主、普通用户（粉丝量不大）</td>
+</tr>
+<tr>
+<td><strong>推拉结合</strong></td>
+<td>小博主推模式；大博主只存发件箱，活跃粉丝推，非活跃粉丝拉</td>
+<td>兼顾性能与成本，适应性强</td>
+<td>实现复杂，需要区分用户等级和活跃度</td>
+<td>大型社交平台（如微博）</td>
+</tr>
+</tbody></table>
+<blockquote>
+<p>本项目用户量较小，采用<strong>推模式</strong>实现，代码简单且读取性能好。</p>
+</blockquote>
+<h3 id="4-3-推模式的实现"><a href="#4-3-推模式的实现" class="headerlink" title="4.3 推模式的实现"></a>4.3 推模式的实现</h3><h4 id="数据结构选择"><a href="#数据结构选择" class="headerlink" title="数据结构选择"></a>数据结构选择</h4><p>收件箱使用 Redis 的 <strong>Sorted Set（ZSet）</strong>，原因：</p>
+<ol>
+<li>需要按时间排序 → ZSet 的 score 可以存时间戳，天然有序</li>
+<li>需要去重 → ZSet 的 member 唯一，同一篇博客不会重复出现</li>
+<li>需要分页查询 → ZSet 支持按 score 范围查询，适合滚动分页</li>
+</ol>
+<p>Key 设计：<code>feed:{userId}</code>，value 是博客 id，score 是发布时间戳。</p>
+<h4 id="发博时推送"><a href="#发博时推送" class="headerlink" title="发博时推送"></a>发博时推送</h4><p>博主发布探店笔记时，查询所有粉丝，将博客 id 写入每个粉丝的收件箱：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@Override</span></span><br><span class="line"><span class="keyword">public</span> <span class="type">Result</span> <span class="title function_">saveBlog</span><span class="params">(Blog blog)</span> &#123;</span><br><span class="line">    <span class="type">UserDTO</span> <span class="variable">user</span> <span class="operator">=</span> UserHolder.getUser();</span><br><span class="line">    blog.setUserId(user.getId());</span><br><span class="line"></span><br><span class="line">    <span class="comment">// 1. 保存探店博文到数据库</span></span><br><span class="line">    <span class="type">boolean</span> <span class="variable">isSuccess</span> <span class="operator">=</span> save(blog);</span><br><span class="line">    <span class="keyword">if</span> (!isSuccess) &#123;</span><br><span class="line">        <span class="keyword">return</span> Result.fail(<span class="string">&quot;保存失败&quot;</span>);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="comment">// 2. 查询所有粉丝</span></span><br><span class="line">    <span class="type">List</span>&lt;Follow&gt; <span class="variable">follows</span> <span class="operator">=</span> followService.query()</span><br><span class="line">            .select(<span class="string">&quot;user_id&quot;</span>)</span><br><span class="line">            .eq(<span class="string">&quot;follow_user_id&quot;</span>, user.getId())</span><br><span class="line">            .list();</span><br><span class="line"></span><br><span class="line">    <span class="comment">// 3. 推送到每个粉丝的收件箱</span></span><br><span class="line">    follows.forEach(follow -&gt; &#123;</span><br><span class="line">        <span class="type">Long</span> <span class="variable">userId</span> <span class="operator">=</span> follow.getUserId();</span><br><span class="line">        <span class="type">String</span> <span class="variable">key</span> <span class="operator">=</span> FEED_KEY + userId;</span><br><span class="line">        stringRedisTemplate.opsForZSet()</span><br><span class="line">                .add(key, blog.getId().toString(), System.currentTimeMillis());</span><br><span class="line">    &#125;);</span><br><span class="line"></span><br><span class="line">    <span class="keyword">return</span> Result.ok(blog.getId());</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<blockquote>
+<p>这里的粉丝查询是同步的，粉丝量多时会影响发博接口的响应时间。实际生产中可以用消息队列异步推送。</p>
+</blockquote>
+<hr>
+<h2 id="五、滚动分页"><a href="#五、滚动分页" class="headerlink" title="五、滚动分页"></a>五、滚动分页</h2><h3 id="5-1-为什么不用传统分页"><a href="#5-1-为什么不用传统分页" class="headerlink" title="5.1 为什么不用传统分页"></a>5.1 为什么不用传统分页</h3><p>Feed 流是<strong>持续有新内容插入</strong>的场景，如果用传统的页码分页（<code>pageNum + pageSize</code>），会有问题：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">第一次查询：第 1 页，取最新的 10 条</span><br><span class="line">（期间有 3 条新内容发布，插入到最前面）</span><br><span class="line">第二次查询：第 2 页，从第 11 条开始取 → 原本的第 8、9、10 条又出现了（因为被新内容挤到第 11、12、13 位了）</span><br></pre></td></tr></table></figure>
+
+<p>结果就是<strong>内容重复</strong>，用户体验很差。</p>
+<h3 id="5-2-滚动分页原理"><a href="#5-2-滚动分页原理" class="headerlink" title="5.2 滚动分页原理"></a>5.2 滚动分页原理</h3><p>滚动分页（Scroll Pagination）用<strong>时间戳 + offset</strong> 代替页码，每次以上次查询的<strong>最早一条的时间戳</strong>作为下次查询的上界：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">第一次查询：max = 当前时间戳, offset = 0</span><br><span class="line">    ↓</span><br><span class="line">返回 10 条，其中最早的时间是 T5，且有 2 条时间都是 T5</span><br><span class="line">    ↓</span><br><span class="line">第二次查询：max = T5, offset = 2（跳过上次已经查过的 T5 的那 2 条）</span><br><span class="line">    ↓</span><br><span class="line">从 T5 之前的内容开始查，不会重复</span><br></pre></td></tr></table></figure>
+
+<p>为什么需要 <code>offset</code>？因为 ZSet 的 <code>ZREVRANGEBYSCORE</code> 是<strong>闭区间</strong>（min 和 max 都包含），如果上次查询的最小值是 T5，这次以 T5 为 max 再查，T5 对应的那些元素又会被查出来，所以需要用 offset 跳过已经返回过的数量。</p>
+<h3 id="5-3-接口设计"><a href="#5-3-接口设计" class="headerlink" title="5.3 接口设计"></a>5.3 接口设计</h3><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@GetMapping(&quot;/of/follow&quot;)</span></span><br><span class="line"><span class="keyword">public</span> <span class="type">Result</span> <span class="title function_">quereBlogByFollow</span><span class="params">(</span></span><br><span class="line"><span class="params">        <span class="meta">@RequestParam(&quot;lastId&quot;)</span> Long max,</span></span><br><span class="line"><span class="params">        <span class="meta">@RequestParam(value = &quot;offset&quot;, defaultValue = &quot;0&quot;)</span> Integer offset)</span> &#123;</span><br><span class="line">    <span class="keyword">return</span> blogService.quereBlogByFollow(max, offset);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>前端传参：</p>
+<ul>
+<li><code>lastId</code>（即 max）：本次查询的时间戳上界；首次查询传当前时间戳</li>
+<li><code>offset</code>：偏移量，跳过多少条与最小值时间相同的内容；首次传 0</li>
+</ul>
+<h3 id="5-4-核心实现"><a href="#5-4-核心实现" class="headerlink" title="5.4 核心实现"></a>5.4 核心实现</h3><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@Override</span></span><br><span class="line"><span class="keyword">public</span> <span class="type">Result</span> <span class="title function_">quereBlogByFollow</span><span class="params">(Long max, Integer offset)</span> &#123;</span><br><span class="line">    <span class="comment">// 1. 获取当前用户</span></span><br><span class="line">    <span class="type">Long</span> <span class="variable">userId</span> <span class="operator">=</span> UserHolder.getUser().getId();</span><br><span class="line">    <span class="type">String</span> <span class="variable">key</span> <span class="operator">=</span> FEED_KEY + userId;</span><br><span class="line"></span><br><span class="line">    <span class="comment">// 2. 从 ZSet 中按 score 倒序查询，范围 [0, max]，从 offset 开始取 3 条</span></span><br><span class="line">    Set&lt;ZSetOperations.TypedTuple&lt;String&gt;&gt; typedTuples =</span><br><span class="line">            stringRedisTemplate.opsForZSet()</span><br><span class="line">                    .reverseRangeByScoreWithScores(key, <span class="number">0</span>, max, offset, <span class="number">3</span>);</span><br><span class="line">    <span class="keyword">if</span> (typedTuples == <span class="literal">null</span> || typedTuples.isEmpty()) &#123;</span><br><span class="line">        <span class="keyword">return</span> Result.ok();</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="comment">// 3. 解析数据：收集 blogId，计算 minTime 和新的 offset</span></span><br><span class="line">    <span class="type">long</span> <span class="variable">minTime</span> <span class="operator">=</span> <span class="number">0L</span>;</span><br><span class="line">    <span class="type">int</span> <span class="variable">os</span> <span class="operator">=</span> <span class="number">1</span>; <span class="comment">// 下次查询的 offset</span></span><br><span class="line">    <span class="type">List</span>&lt;Long&gt; <span class="variable">ids</span> <span class="operator">=</span> <span class="keyword">new</span> <span class="title class_">ArrayList</span>&lt;&gt;();</span><br><span class="line">    <span class="keyword">for</span> (ZSetOperations.TypedTuple&lt;String&gt; typedTuple : typedTuples) &#123;</span><br><span class="line">        ids.add(Long.valueOf(typedTuple.getValue()));</span><br><span class="line">        <span class="type">long</span> <span class="variable">time</span> <span class="operator">=</span> typedTuple.getScore().longValue();</span><br><span class="line">        <span class="keyword">if</span> (time == minTime) &#123;</span><br><span class="line">            os++; <span class="comment">// 与当前最小值时间相同，offset 加一</span></span><br><span class="line">        &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">            minTime = time; <span class="comment">// 更新最小值</span></span><br><span class="line">            os = <span class="number">1</span>;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="comment">// 4. 根据 blogId 列表查询博客详情，保持顺序</span></span><br><span class="line">    <span class="type">String</span> <span class="variable">idsStr</span> <span class="operator">=</span> StrUtil.join(<span class="string">&quot;,&quot;</span>, ids);</span><br><span class="line">    <span class="type">List</span>&lt;Blog&gt; <span class="variable">blogList</span> <span class="operator">=</span> query()</span><br><span class="line">            .in(<span class="string">&quot;id&quot;</span>, ids)</span><br><span class="line">            .last(<span class="string">&quot;order by FIELD(id, &quot;</span> + idsStr + <span class="string">&quot;)&quot;</span>)</span><br><span class="line">            .list();</span><br><span class="line"></span><br><span class="line">    <span class="comment">// 5. 填充作者信息和点赞状态</span></span><br><span class="line">    blogList.forEach(blog -&gt; &#123;</span><br><span class="line">        queueBlogUser(blog);</span><br><span class="line">        setIsLike(blog);</span><br><span class="line">    &#125;);</span><br><span class="line"></span><br><span class="line">    <span class="comment">// 6. 封装返回结果：列表 + 最小时间 + 下次偏移量</span></span><br><span class="line">    <span class="type">ScrollResult</span> <span class="variable">scrollResult</span> <span class="operator">=</span> <span class="keyword">new</span> <span class="title class_">ScrollResult</span>(blogList, minTime, os);</span><br><span class="line">    <span class="keyword">return</span> Result.ok(scrollResult);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>返回结果封装在 <code>ScrollResult</code> 中：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@Data</span></span><br><span class="line"><span class="meta">@AllArgsConstructor</span></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">class</span> <span class="title class_">ScrollResult</span> &#123;</span><br><span class="line">    <span class="keyword">private</span> List&lt;?&gt; list;    <span class="comment">// 数据列表</span></span><br><span class="line">    <span class="keyword">private</span> Long minTime;    <span class="comment">// 本次查询的最小时间戳，作为下次的 max</span></span><br><span class="line">    <span class="keyword">private</span> Integer offset;  <span class="comment">// 下次查询的偏移量</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h3 id="5-5-关键-API-说明"><a href="#5-5-关键-API-说明" class="headerlink" title="5.5 关键 API 说明"></a>5.5 关键 API 说明</h3><p><strong><code>reverseRangeByScoreWithScores(key, min, max, offset, count)</code></strong></p>
+<p>对应 Redis 命令：<code>ZREVRANGEBYSCORE key max min LIMIT offset count</code></p>
+<ul>
+<li><code>min</code> &#x2F; <code>max</code>：score 的范围，注意参数顺序与命令一致（max 在前，min 在后，因为是倒序）</li>
+<li><code>offset</code> &#x2F; <code>count</code>：分页偏移和数量，类似 SQL 的 <code>LIMIT offset, count</code></li>
+<li>返回 <code>Set&lt;TypedTuple&lt;String&gt;&gt;</code>，每个元素包含 value 和 score</li>
+</ul>
+<blockquote>
+<p>注意：Java 方法名中的 <code>reverseRangeByScoreWithScores</code> 参数顺序是 <code>(key, min, max, offset, count)</code>，与 Redis 命令 <code>ZREVRANGEBYSCORE key max min</code> 的 max&#x2F;min 顺序不同，使用时注意不要搞反。</p>
+</blockquote>
+<hr>
+<h2 id="六、关于-Feed-流的扩展思考"><a href="#六、关于-Feed-流的扩展思考" class="headerlink" title="六、关于 Feed 流的扩展思考"></a>六、关于 Feed 流的扩展思考</h2><h3 id="6-1-推模式的问题"><a href="#6-1-推模式的问题" class="headerlink" title="6.1 推模式的问题"></a>6.1 推模式的问题</h3><p>当前推模式实现简单，但存在一些潜在问题：</p>
+<ul>
+<li><strong>大 V 发博慢</strong>：如果一个博主有 100 万粉丝，发一次文要写 100 万次 Redis，耗时很长</li>
+<li><strong>数据冗余</strong>：每篇博客在每个粉丝的收件箱都存一份，存储空间大</li>
+<li><strong>新粉丝看不到历史</strong>：新关注的用户，之前的博客不会出现在 TA 的收件箱里</li>
+</ul>
+<h3 id="6-2-改进方向"><a href="#6-2-改进方向" class="headerlink" title="6.2 改进方向"></a>6.2 改进方向</h3><table>
+<thead>
+<tr>
+<th>问题</th>
+<th>优化方案</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>大 V 发博慢</td>
+<td>用消息队列异步推送，或对大 V 改用拉模式</td>
+</tr>
+<tr>
+<td>新粉丝看不到历史</td>
+<td>关注时将博主最近的 N 条博客补推到粉丝收件箱</td>
+</tr>
+<tr>
+<td>存储空间大</td>
+<td>设置收件箱的 TTL，比如只保留最近一个月的内容；冷数据归档</td>
+</tr>
+<tr>
+<td>数据一致性</td>
+<td>数据库和 Redis 双写需要保证一致性，可用消息队列或分布式事务</td>
+</tr>
+</tbody></table>
+<hr>
+<h2 id="今日总结"><a href="#今日总结" class="headerlink" title="今日总结"></a>今日总结</h2><table>
+<thead>
+<tr>
+<th>模块</th>
+<th>核心要点</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>关注与取消关注</td>
+<td><code>tb_follow</code> 表存储多对多关系，关注&#x2F;取关同时更新数据库和 Redis Set</td>
+</tr>
+<tr>
+<td>共同关注</td>
+<td>Redis Set 的 <code>SINTER</code> 命令求交集，高效计算共同关注的用户</td>
+</tr>
+<tr>
+<td>Feed 流模式</td>
+<td>拉模式（读扩散）、推模式（写扩散）、推拉结合；本项目采用推模式</td>
+</tr>
+<tr>
+<td>推模式实现</td>
+<td>发博时查询所有粉丝，将博客 id 推入每个粉丝的 ZSet 收件箱，score 为时间戳</td>
+</tr>
+<tr>
+<td>滚动分页</td>
+<td>解决传统页码分页的重复问题；使用 <code>lastTime + offset</code>，ZSet 按 score 范围查询</td>
+</tr>
+<tr>
+<td><code>ScrollResult</code></td>
+<td>封装列表数据、最小时间戳和下次偏移量，返回给前端</td>
+</tr>
+<tr>
+<td><code>ZREVRANGEBYSCORE</code></td>
+<td>按 score 倒序范围查询，支持 <code>LIMIT offset count</code>，min 和 max 都是闭区间</td>
+</tr>
+</tbody></table>
+
+      </div>
+
+    
+    
+    
+
+      <footer class="post-footer">
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/2026/09/25/%E5%A4%8D%E7%9B%98%E4%B8%8E%E7%AC%94%E8%AE%B0/%E5%A4%8D%E7%9B%98/day43%20%E7%94%A8%E6%88%B7%E5%85%B3%E6%B3%A8%E3%80%81%E5%85%B1%E5%90%8C%E5%85%B3%E6%B3%A8%E4%B8%8E%E5%85%B3%E6%B3%A8%E6%8E%A8%E9%80%81Feed%E6%B5%81/" rel="prev" title="day43 用户关注、共同关注与关注推送Feed流">
+      <i class="fa fa-chevron-left"></i> day43 用户关注、共同关注与关注推送Feed流
+    </a></div>
+      <div class="post-nav-item">
+    <a href="/2026/09/25/%E5%A4%8D%E7%9B%98%E4%B8%8E%E7%AC%94%E8%AE%B0/%E5%A4%8D%E7%9B%98/day44/" rel="next" title="">
+       <i class="fa fa-chevron-right"></i>
+    </a></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+
+
+          </div>
+          
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#day43-%E7%94%A8%E6%88%B7%E5%85%B3%E6%B3%A8%E3%80%81%E5%85%B1%E5%90%8C%E5%85%B3%E6%B3%A8%E4%B8%8E%E5%85%B3%E6%B3%A8%E6%8E%A8%E9%80%81Feed%E6%B5%81"><span class="nav-number">1.</span> <span class="nav-text">day43 用户关注、共同关注与关注推送Feed流</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%80%E3%80%81%E4%BB%8A%E6%97%A5%E5%8A%9F%E8%83%BD%E6%A6%82%E8%BF%B0"><span class="nav-number">1.1.</span> <span class="nav-text">一、今日功能概述</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BA%8C%E3%80%81%E5%85%B3%E6%B3%A8%E4%B8%8E%E5%8F%96%E6%B6%88%E5%85%B3%E6%B3%A8"><span class="nav-number">1.2.</span> <span class="nav-text">二、关注与取消关注</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#2-1-%E9%9C%80%E6%B1%82%E4%B8%8E%E6%95%B0%E6%8D%AE%E6%A8%A1%E5%9E%8B"><span class="nav-number">1.2.1.</span> <span class="nav-text">2.1 需求与数据模型</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2-2-%E6%8E%A5%E5%8F%A3%E8%AE%BE%E8%AE%A1"><span class="nav-number">1.2.2.</span> <span class="nav-text">2.2 接口设计</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2-3-%E5%85%B3%E6%B3%A8%E4%B8%8E%E5%8F%96%E6%B6%88%E5%85%B3%E6%B3%A8%E7%9A%84%E5%AE%9E%E7%8E%B0"><span class="nav-number">1.2.3.</span> <span class="nav-text">2.3 关注与取消关注的实现</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2-4-%E5%88%A4%E6%96%AD%E6%98%AF%E5%90%A6%E5%85%B3%E6%B3%A8"><span class="nav-number">1.2.4.</span> <span class="nav-text">2.4 判断是否关注</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%89%E3%80%81%E5%85%B1%E5%90%8C%E5%85%B3%E6%B3%A8"><span class="nav-number">1.3.</span> <span class="nav-text">三、共同关注</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#3-1-%E9%9C%80%E6%B1%82%E4%B8%8E%E5%AE%9E%E7%8E%B0%E6%80%9D%E8%B7%AF"><span class="nav-number">1.3.1.</span> <span class="nav-text">3.1 需求与实现思路</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#3-2-%E6%A0%B8%E5%BF%83%E4%BB%A3%E7%A0%81"><span class="nav-number">1.3.2.</span> <span class="nav-text">3.2 核心代码</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#3-3-Redis-Set-%E4%BA%A4%E9%9B%86%E7%9B%B8%E5%85%B3%E5%91%BD%E4%BB%A4"><span class="nav-number">1.3.3.</span> <span class="nav-text">3.3 Redis Set 交集相关命令</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#3-4-%E5%85%B3%E4%BA%8E%E6%96%B9%E6%A1%88%E7%9A%84%E6%80%9D%E8%80%83"><span class="nav-number">1.3.4.</span> <span class="nav-text">3.4 关于方案的思考</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%9B%9B%E3%80%81%E5%85%B3%E6%B3%A8%E6%8E%A8%E9%80%81-%E2%80%94-Feed-%E6%B5%81"><span class="nav-number">1.4.</span> <span class="nav-text">四、关注推送 — Feed 流</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#4-1-%E4%BB%80%E4%B9%88%E6%98%AF-Feed-%E6%B5%81"><span class="nav-number">1.4.1.</span> <span class="nav-text">4.1 什么是 Feed 流</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#4-2-%E4%B8%89%E7%A7%8D%E5%AE%9E%E7%8E%B0%E6%96%B9%E6%A1%88%E5%AF%B9%E6%AF%94"><span class="nav-number">1.4.2.</span> <span class="nav-text">4.2 三种实现方案对比</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#4-3-%E6%8E%A8%E6%A8%A1%E5%BC%8F%E7%9A%84%E5%AE%9E%E7%8E%B0"><span class="nav-number">1.4.3.</span> <span class="nav-text">4.3 推模式的实现</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84%E9%80%89%E6%8B%A9"><span class="nav-number">1.4.3.1.</span> <span class="nav-text">数据结构选择</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E5%8F%91%E5%8D%9A%E6%97%B6%E6%8E%A8%E9%80%81"><span class="nav-number">1.4.3.2.</span> <span class="nav-text">发博时推送</span></a></li></ol></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BA%94%E3%80%81%E6%BB%9A%E5%8A%A8%E5%88%86%E9%A1%B5"><span class="nav-number">1.5.</span> <span class="nav-text">五、滚动分页</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#5-1-%E4%B8%BA%E4%BB%80%E4%B9%88%E4%B8%8D%E7%94%A8%E4%BC%A0%E7%BB%9F%E5%88%86%E9%A1%B5"><span class="nav-number">1.5.1.</span> <span class="nav-text">5.1 为什么不用传统分页</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#5-2-%E6%BB%9A%E5%8A%A8%E5%88%86%E9%A1%B5%E5%8E%9F%E7%90%86"><span class="nav-number">1.5.2.</span> <span class="nav-text">5.2 滚动分页原理</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#5-3-%E6%8E%A5%E5%8F%A3%E8%AE%BE%E8%AE%A1"><span class="nav-number">1.5.3.</span> <span class="nav-text">5.3 接口设计</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#5-4-%E6%A0%B8%E5%BF%83%E5%AE%9E%E7%8E%B0"><span class="nav-number">1.5.4.</span> <span class="nav-text">5.4 核心实现</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#5-5-%E5%85%B3%E9%94%AE-API-%E8%AF%B4%E6%98%8E"><span class="nav-number">1.5.5.</span> <span class="nav-text">5.5 关键 API 说明</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%85%AD%E3%80%81%E5%85%B3%E4%BA%8E-Feed-%E6%B5%81%E7%9A%84%E6%89%A9%E5%B1%95%E6%80%9D%E8%80%83"><span class="nav-number">1.6.</span> <span class="nav-text">六、关于 Feed 流的扩展思考</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#6-1-%E6%8E%A8%E6%A8%A1%E5%BC%8F%E7%9A%84%E9%97%AE%E9%A2%98"><span class="nav-number">1.6.1.</span> <span class="nav-text">6.1 推模式的问题</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#6-2-%E6%94%B9%E8%BF%9B%E6%96%B9%E5%90%91"><span class="nav-number">1.6.2.</span> <span class="nav-text">6.2 改进方向</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BB%8A%E6%97%A5%E6%80%BB%E7%BB%93"><span class="nav-number">1.7.</span> <span class="nav-text">今日总结</span></a></li></ol></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="ZHX"
+      src="/images/avatar.jpeg">
+  <p class="site-author-name" itemprop="name">ZHX</p>
+  <div class="site-description" itemprop="description">记录编程学习、项目实战和踩坑笔记</div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">66</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+            <a href="/categories/">
+          
+        <span class="site-state-item-count">12</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+  </nav>
+</div>
+
+
+
+      </div>
+        <div class="back-to-top motion-element">
+          <i class="fa fa-arrow-up"></i>
+          <span>0%</span>
+        </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2026</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">ZHX</span>
+</div>
+  <div class="powered-by">由 <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Gemini</a> 强力驱动
+  </div>
+
+        
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/pisces.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+
+</body>
+</html>

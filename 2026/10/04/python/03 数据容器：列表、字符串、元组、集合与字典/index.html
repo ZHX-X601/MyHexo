@@ -1,0 +1,679 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 8.1.2">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/favicon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon.png">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/all.min.css">
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"www.blog-x.cc.cd","root":"/","scheme":"Gemini","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"always","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":false,"show_result":false,"style":null},"back2top":{"enable":true,"sidebar":true,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":false,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}}};
+  </script>
+
+  <meta name="description" content="03 数据容器：列表、字符串、元组、集合与字典 本节以练习代码 03.py 为主线，对应讲义《第2章03节 数据存储容器》：五大容器 list &#x2F; str &#x2F; tuple &#x2F; set &#x2F; dict，以及切片、推导式、组包解包等 Python 特色写法。  一、列表 list1.1 定义与特点 [元素...] 定义；可以存储不同类型元素（数字、字符串、布尔、N">
+<meta property="og:type" content="article">
+<meta property="og:title" content="03 数据容器：列表、字符串、元组、集合与字典">
+<meta property="og:url" content="https://www.blog-x.cc.cd/2026/10/04/python/03%20%E6%95%B0%E6%8D%AE%E5%AE%B9%E5%99%A8%EF%BC%9A%E5%88%97%E8%A1%A8%E3%80%81%E5%AD%97%E7%AC%A6%E4%B8%B2%E3%80%81%E5%85%83%E7%BB%84%E3%80%81%E9%9B%86%E5%90%88%E4%B8%8E%E5%AD%97%E5%85%B8/index.html">
+<meta property="og:site_name" content="我的学习日记">
+<meta property="og:description" content="03 数据容器：列表、字符串、元组、集合与字典 本节以练习代码 03.py 为主线，对应讲义《第2章03节 数据存储容器》：五大容器 list &#x2F; str &#x2F; tuple &#x2F; set &#x2F; dict，以及切片、推导式、组包解包等 Python 特色写法。  一、列表 list1.1 定义与特点 [元素...] 定义；可以存储不同类型元素（数字、字符串、布尔、N">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2026-10-04T15:06:54.000Z">
+<meta property="article:modified_time" content="2026-10-04T15:15:54.327Z">
+<meta property="article:author" content="ZHX">
+<meta name="twitter:card" content="summary">
+
+<link rel="canonical" href="https://www.blog-x.cc.cd/2026/10/04/python/03%20%E6%95%B0%E6%8D%AE%E5%AE%B9%E5%99%A8%EF%BC%9A%E5%88%97%E8%A1%A8%E3%80%81%E5%AD%97%E7%AC%A6%E4%B8%B2%E3%80%81%E5%85%83%E7%BB%84%E3%80%81%E9%9B%86%E5%90%88%E4%B8%8E%E5%AD%97%E5%85%B8/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'zh-CN'
+  };
+</script>
+
+  <title>03 数据容器：列表、字符串、元组、集合与字典 | 我的学习日记</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">我的学习日记</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="main-menu menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档<span class="badge">66</span></a>
+
+  </li>
+        <li class="menu-item menu-item-categories">
+
+    <a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分类<span class="badge">12</span></a>
+
+  </li>
+        <li class="menu-item menu-item-about">
+
+    <a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>关于</a>
+
+  </li>
+        <li class="menu-item menu-item-tags">
+
+    <a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签<span class="badge">0</span></a>
+
+  </li>
+  </ul>
+</nav>
+
+
+
+
+</div>
+    </header>
+
+    
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://www.blog-x.cc.cd/2026/10/04/python/03%20%E6%95%B0%E6%8D%AE%E5%AE%B9%E5%99%A8%EF%BC%9A%E5%88%97%E8%A1%A8%E3%80%81%E5%AD%97%E7%AC%A6%E4%B8%B2%E3%80%81%E5%85%83%E7%BB%84%E3%80%81%E9%9B%86%E5%90%88%E4%B8%8E%E5%AD%97%E5%85%B8/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.jpeg">
+      <meta itemprop="name" content="ZHX">
+      <meta itemprop="description" content="记录编程学习、项目实战和踩坑笔记">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="我的学习日记">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          03 数据容器：列表、字符串、元组、集合与字典
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+              
+
+              <time title="创建时间：2026-10-04 23:06:54 / 修改时间：23:15:54" itemprop="dateCreated datePublished" datetime="2026-10-04T23:06:54+08:00">2026-10-04</time>
+            </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/python/" itemprop="url" rel="index"><span itemprop="name">python</span></a>
+                </span>
+                  ，
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/python/%E5%9F%BA%E7%A1%80%E8%AF%AD%E6%B3%95/" itemprop="url" rel="index"><span itemprop="name">基础语法</span></a>
+                </span>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+      <div class="post-body" itemprop="articleBody">
+
+        
+          <h1 id="03-数据容器：列表、字符串、元组、集合与字典"><a href="#03-数据容器：列表、字符串、元组、集合与字典" class="headerlink" title="03 数据容器：列表、字符串、元组、集合与字典"></a>03 数据容器：列表、字符串、元组、集合与字典</h1><blockquote>
+<p>本节以练习代码 <code>03.py</code> 为主线，对应讲义《第2章03节 数据存储容器》：五大容器 list &#x2F; str &#x2F; tuple &#x2F; set &#x2F; dict，以及切片、推导式、组包解包等 Python 特色写法。</p>
+</blockquote>
+<h2 id="一、列表-list"><a href="#一、列表-list" class="headerlink" title="一、列表 list"></a>一、列表 list</h2><h3 id="1-1-定义与特点"><a href="#1-1-定义与特点" class="headerlink" title="1.1 定义与特点"></a>1.1 定义与特点</h3><ul>
+<li><code>[元素...]</code> 定义；<strong>可以存储不同类型元素</strong>（数字、字符串、布尔、None 混装），且元素有序、可重复、可修改。</li>
+</ul>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">a = [<span class="number">10</span>, <span class="number">10</span>, <span class="number">12.5</span>, <span class="string">&#x27;hello&#x27;</span>, <span class="literal">True</span>, <span class="literal">None</span>]</span><br><span class="line"><span class="keyword">for</span> i <span class="keyword">in</span> a:</span><br><span class="line">    <span class="built_in">print</span>(i, <span class="built_in">type</span>(i))</span><br><span class="line"><span class="comment"># 10 &lt;class &#x27;int&#x27;&gt;</span></span><br><span class="line"><span class="comment"># 12.5 &lt;class &#x27;float&#x27;&gt;</span></span><br><span class="line"><span class="comment"># hello &lt;class &#x27;str&#x27;&gt;</span></span><br><span class="line"><span class="comment"># True &lt;class &#x27;bool&#x27;&gt;</span></span><br><span class="line"><span class="comment"># None &lt;class &#x27;NoneType&#x27;&gt;</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="1-2-索引与切片"><a href="#1-2-索引与切片" class="headerlink" title="1.2 索引与切片"></a>1.2 索引与切片</h3><ul>
+<li>正向索引从 0 起，反向索引从 -1 起；越界报 <code>IndexError</code>。</li>
+<li>切片格式 <code>[开始:结束:步长]</code>：<strong>不包含结束位置</strong>；start 默认 0，end 默认末尾，step 默认 1；支持负索引。</li>
+</ul>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">print</span>(a[<span class="number">0</span>])          <span class="comment"># 10</span></span><br><span class="line"><span class="built_in">print</span>(a[<span class="number">0</span>:-<span class="number">2</span>])       <span class="comment"># [10, 10, 12.5, &#x27;hello&#x27;]     不包含倒数第 2 个</span></span><br><span class="line"><span class="built_in">print</span>(a[<span class="number">0</span>:-<span class="number">2</span>:<span class="number">2</span>])     <span class="comment"># [10, 12.5]                 步长 2 跳着取</span></span><br><span class="line"><span class="built_in">print</span>(a[-<span class="number">2</span>:<span class="number">0</span>:-<span class="number">1</span>])    <span class="comment"># [True, &#x27;hello&#x27;, 12.5, 10]  反向取</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="1-3-常用方法"><a href="#1-3-常用方法" class="headerlink" title="1.3 常用方法"></a>1.3 常用方法</h3><table>
+<thead>
+<tr>
+<th>方法</th>
+<th>作用</th>
+<th>示例</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>append(x)</code></td>
+<td>尾部追加</td>
+<td><code>a.append(&quot;python&quot;)</code></td>
+</tr>
+<tr>
+<td><code>insert(i, x)</code></td>
+<td>在指定索引之前插入</td>
+<td><code>a.insert(2, 5)</code></td>
+</tr>
+<tr>
+<td><code>remove(x)</code></td>
+<td>移除第一个匹配到的值</td>
+<td><code>a.remove(10)</code></td>
+</tr>
+<tr>
+<td><code>sort()</code></td>
+<td>原地排序（默认升序，<code>reverse=True</code> 降序）</td>
+<td><code>b.sort(reverse=True)</code></td>
+</tr>
+<tr>
+<td><code>reverse()</code></td>
+<td>原地反转</td>
+<td><code>b.reverse()</code></td>
+</tr>
+</tbody></table>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">a = [<span class="number">10</span>, <span class="number">10</span>, <span class="number">12.5</span>, <span class="string">&#x27;hello&#x27;</span>, <span class="literal">True</span>, <span class="literal">None</span>]</span><br><span class="line">a.append(<span class="string">&quot;python&quot;</span>)      <span class="comment"># [10, 10, 12.5, &#x27;hello&#x27;, True, None, &#x27;python&#x27;]</span></span><br><span class="line">a.insert(<span class="number">2</span>, <span class="number">5</span>)          <span class="comment"># [10, 10, 5, 12.5, &#x27;hello&#x27;, True, None, &#x27;python&#x27;]</span></span><br><span class="line">a.remove(<span class="number">10</span>)            <span class="comment"># 删第一个 10 → [10, 5, 12.5, &#x27;hello&#x27;, True, None, &#x27;python&#x27;]</span></span><br><span class="line"></span><br><span class="line">b = [<span class="number">1</span>, <span class="number">9</span>, <span class="number">8</span>, <span class="number">5</span>, <span class="number">7</span>, <span class="number">6</span>, <span class="number">3</span>]</span><br><span class="line">b.sort(reverse=<span class="literal">True</span>)    <span class="comment"># [9, 8, 7, 6, 5, 3, 1]</span></span><br><span class="line">b.reverse()             <span class="comment"># [1, 3, 5, 6, 7, 8, 9]</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="1-4-统计函数"><a href="#1-4-统计函数" class="headerlink" title="1.4 统计函数"></a>1.4 统计函数</h3><ul>
+<li><code>min()</code> &#x2F; <code>max()</code> &#x2F; <code>sum()</code> &#x2F; <code>len()</code> 分别取最小、最大、求和、长度。</li>
+</ul>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">print</span>(<span class="built_in">min</span>(b))   <span class="comment"># 1</span></span><br><span class="line"><span class="built_in">print</span>(<span class="built_in">max</span>(b))   <span class="comment"># 9</span></span><br><span class="line"><span class="built_in">print</span>(<span class="built_in">sum</span>(b))   <span class="comment"># 39</span></span><br><span class="line"><span class="built_in">print</span>(<span class="built_in">len</span>(b))   <span class="comment"># 7</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="1-5-合并、解包与存在判断"><a href="#1-5-合并、解包与存在判断" class="headerlink" title="1.5 合并、解包与存在判断"></a>1.5 合并、解包与存在判断</h3><ul>
+<li>合并：<code>list1 + list2</code>；或解包 <code>[*list1, *list2]</code>（<code>*</code> 把列表拆成独立元素）。</li>
+<li><code>元素 in 列表</code> 判断是否存在，返回布尔值。</li>
+<li><code>print(*列表)</code> 可直接把元素逐个展开输出。</li>
+</ul>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">c = a + b</span><br><span class="line">c = [*b, *a]            <span class="comment"># 解包合并</span></span><br><span class="line"><span class="built_in">print</span>(*b)               <span class="comment"># 1 3 5 6 7 8 9</span></span><br><span class="line"><span class="built_in">print</span>(<span class="number">5</span> <span class="keyword">in</span> b)           <span class="comment"># True</span></span><br><span class="line"><span class="built_in">print</span>(<span class="number">55</span> <span class="keyword">in</span> b)          <span class="comment"># False</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="1-6-扩展解包（Python-特色）"><a href="#1-6-扩展解包（Python-特色）" class="headerlink" title="1.6 扩展解包（Python 特色）"></a>1.6 扩展解包（Python 特色）</h3><ul>
+<li><code>z, *x, d = 列表</code>：<code>*</code> 收集中间剩余元素成<strong>列表</strong>。</li>
+</ul>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">z, *x, d = b</span><br><span class="line"><span class="built_in">print</span>(z)    <span class="comment"># 1</span></span><br><span class="line"><span class="built_in">print</span>(x)    <span class="comment"># [3, 5, 6, 7, 8]</span></span><br><span class="line"><span class="built_in">print</span>(d)    <span class="comment"># 9</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="1-7-列表推导式"><a href="#1-7-列表推导式" class="headerlink" title="1.7 列表推导式"></a>1.7 列表推导式</h3><ul>
+<li>一行生成新列表：<code>[要插入的数据 for i in 数据集 if 条件]</code>，先写”放什么”，再写”从哪来”，最后”筛什么”。</li>
+</ul>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">a = [i * <span class="number">2</span> <span class="keyword">for</span> i <span class="keyword">in</span> <span class="built_in">range</span>(<span class="number">1</span>, <span class="number">11</span>)]</span><br><span class="line"><span class="built_in">print</span>(a)    <span class="comment"># [2, 4, 6, 8, 10, 12, 14, 16, 18, 20]</span></span><br><span class="line"></span><br><span class="line">a = [i * <span class="number">2</span> <span class="keyword">for</span> i <span class="keyword">in</span> <span class="built_in">range</span>(<span class="number">1</span>, <span class="number">11</span>) <span class="keyword">if</span> i % <span class="number">2</span> == <span class="number">1</span>]</span><br><span class="line"><span class="built_in">print</span>(a)    <span class="comment"># 只取奇数 → [2, 6, 10, 14, 18]</span></span><br></pre></td></tr></table></figure>
+
+<h2 id="二、字符串-str"><a href="#二、字符串-str" class="headerlink" title="二、字符串 str"></a>二、字符串 str</h2><h3 id="2-1-不可变性"><a href="#2-1-不可变性" class="headerlink" title="2.1 不可变性"></a>2.1 不可变性</h3><ul>
+<li>字符串是字符容器：有序、可迭代、<strong>不可修改</strong>。<code>upper()</code> 等方法返回<strong>新字符串</strong>，原字符串不变，要接收必须重新赋值。</li>
+</ul>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">s = <span class="string">&#x27;helloworld&#x27;</span></span><br><span class="line"><span class="built_in">print</span>(s[<span class="number">0</span>:-<span class="number">3</span>:<span class="number">2</span>])        <span class="comment"># hloo</span></span><br><span class="line"><span class="built_in">print</span>(s.upper())        <span class="comment"># HELLOWORLD</span></span><br><span class="line"><span class="built_in">print</span>(s)                <span class="comment"># helloworld ← 原串没变</span></span><br><span class="line">s = s.upper()           <span class="comment"># 重新赋值才生效</span></span><br><span class="line"><span class="built_in">print</span>(s)                <span class="comment"># HELLOWORLD</span></span><br><span class="line"><span class="built_in">print</span>(s.lower())        <span class="comment"># helloworld</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="2-2-切片"><a href="#2-2-切片" class="headerlink" title="2.2 切片"></a>2.2 切片</h3><ul>
+<li>与列表同规则 <code>[开始:结束:步长]</code>，不包含结束位置；<code>s[::-1]</code> 反转。</li>
+</ul>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">s = <span class="string">&quot;Python&quot;</span></span><br><span class="line"><span class="built_in">print</span>(s[<span class="number">0</span>:<span class="number">5</span>:<span class="number">2</span>])     <span class="comment"># Pto</span></span><br><span class="line"><span class="built_in">print</span>(s[::-<span class="number">1</span>])      <span class="comment"># nohtyP</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="2-3-常用方法"><a href="#2-3-常用方法" class="headerlink" title="2.3 常用方法"></a>2.3 常用方法</h3><table>
+<thead>
+<tr>
+<th>方法</th>
+<th>作用</th>
+<th>示例结果</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>find(子串)</code></td>
+<td>返回第一次出现索引，<strong>找不到返回 -1</strong></td>
+<td><code>s.find(&#39;ASD&#39;)</code> → -1</td>
+</tr>
+<tr>
+<td><code>count(子串)</code></td>
+<td>统计出现次数</td>
+<td><code>s.count(&#39;OWO&#39;)</code> → 1</td>
+</tr>
+<tr>
+<td><code>upper() / lower()</code></td>
+<td>转大写 &#x2F; 小写（返回新串）</td>
+<td>—</td>
+</tr>
+<tr>
+<td><code>split(分隔符)</code></td>
+<td>按分隔符切成列表</td>
+<td><code>&#39;h*e*l*l*o&#39;.split(&#39;*&#39;)</code> → <code>[&#39;h&#39;,&#39;e&#39;,&#39;l&#39;,&#39;l&#39;,&#39;o&#39;]</code></td>
+</tr>
+<tr>
+<td><code>strip(字符)</code></td>
+<td>去除两端指定字符（默认空白）</td>
+<td><code>&#39;***hello***&#39;.strip(&#39;*&#39;)</code> → <code>hello</code></td>
+</tr>
+<tr>
+<td><code>lstrip(字符)</code></td>
+<td>只去左端</td>
+<td><code>&#39;***hello***&#39;.lstrip(&#39;*&#39;)</code> → <code>hello***</code></td>
+</tr>
+<tr>
+<td><code>replace(旧, 新)</code></td>
+<td>替换所有匹配</td>
+<td><code>&#39;***hello***&#39;.replace(&#39;*&#39;,&#39; hi &#39;)</code> → <code> hi  hi  hi hello hi  hi  hi</code></td>
+</tr>
+<tr>
+<td><code>startswith(子串)</code></td>
+<td>是否以指定子串开头</td>
+<td><code>&#39;***&#39;.startswith(&#39;***&#39;)</code> → True</td>
+</tr>
+</tbody></table>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">s = <span class="string">&#x27;helloworld&#x27;</span></span><br><span class="line"><span class="built_in">print</span>(s.find(<span class="string">&#x27;ASD&#x27;</span>))     <span class="comment"># -1</span></span><br><span class="line"><span class="built_in">print</span>(s.find(<span class="string">&#x27;OWO&#x27;</span>))     <span class="comment"># 4</span></span><br><span class="line"><span class="built_in">print</span>(s.count(<span class="string">&#x27;OWO&#x27;</span>))    <span class="comment"># 1</span></span><br><span class="line"></span><br><span class="line">s = <span class="string">&#x27;***hello***&#x27;</span></span><br><span class="line"><span class="built_in">print</span>(s.startswith(<span class="string">&#x27;***&#x27;</span>))      <span class="comment"># True</span></span><br><span class="line"><span class="built_in">print</span>(s.startswith(<span class="string">&#x27;***b&#x27;</span>))     <span class="comment"># False</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="2-4-join-：split-的反向操作（补充）"><a href="#2-4-join-：split-的反向操作（补充）" class="headerlink" title="2.4 join()：split 的反向操作（补充）"></a>2.4 join()：split 的反向操作（补充）</h3><ul>
+<li><code>分隔符.join(字符串列表)</code> 把列表拼成一个字符串。</li>
+</ul>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">a = [<span class="string">&#x27;ds&#x27;</span>, <span class="string">&#x27;sd&#x27;</span>, <span class="string">&#x27;dd&#x27;</span>]</span><br><span class="line"><span class="built_in">print</span>(<span class="string">&#x27;&#x27;</span>.join(a))        <span class="comment"># dssddd</span></span><br><span class="line"><span class="built_in">print</span>(<span class="string">&#x27;-&#x27;</span>.join(a))       <span class="comment"># ds-sd-dd</span></span><br></pre></td></tr></table></figure>
+
+<h2 id="三、元组-tuple"><a href="#三、元组-tuple" class="headerlink" title="三、元组 tuple"></a>三、元组 tuple</h2><h3 id="3-1-定义与特点"><a href="#3-1-定义与特点" class="headerlink" title="3.1 定义与特点"></a>3.1 定义与特点</h3><ul>
+<li><code>(元素...)</code> 定义；有序、可重复、<strong>不可修改</strong>（适合固定配置等只读数据）；支持索引与切片。</li>
+<li>方法只有两个：<code>count()</code> 统计次数、<code>index()</code> 查找索引（<strong>不存在报错</strong>）。</li>
+</ul>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">t1 = (<span class="number">1</span>, <span class="number">2</span>, <span class="number">5</span>, <span class="number">6</span>, <span class="number">9</span>, <span class="number">8</span>, <span class="number">4</span>, <span class="number">5</span>)</span><br><span class="line"><span class="built_in">print</span>(t1[<span class="number">1</span>:-<span class="number">2</span>:<span class="number">2</span>])     <span class="comment"># (2, 6, 8)        切片结果还是元组</span></span><br><span class="line"><span class="built_in">print</span>(t1.count(<span class="number">5</span>))    <span class="comment"># 2</span></span><br><span class="line"><span class="built_in">print</span>(t1.index(<span class="number">6</span>))    <span class="comment"># 3</span></span><br><span class="line"><span class="comment"># t1.index(7)  # 报错：不存在</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="3-2-单元素元组的坑"><a href="#3-2-单元素元组的坑" class="headerlink" title="3.2 单元素元组的坑"></a>3.2 单元素元组的坑</h3><ul>
+<li>单元素元组<strong>结尾必须加逗号</strong>：<code>(5,)</code> 才是元组；<code>(1)</code> 只是括号括起来的整数。</li>
+</ul>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">t2 = (<span class="number">1</span>)</span><br><span class="line"><span class="built_in">print</span>(t2, <span class="built_in">type</span>(t2))      <span class="comment"># 1 &lt;class &#x27;int&#x27;&gt;</span></span><br><span class="line">t2 = (<span class="string">&#x27;saa&#x27;</span>)</span><br><span class="line"><span class="built_in">print</span>(t2, <span class="built_in">type</span>(t2))      <span class="comment"># saa &lt;class &#x27;str&#x27;&gt;</span></span><br><span class="line">t2 = (<span class="number">5</span>,)</span><br><span class="line"><span class="built_in">print</span>(t2, <span class="built_in">type</span>(t2))      <span class="comment"># (5,) &lt;class &#x27;tuple&#x27;&gt;</span></span><br><span class="line"></span><br><span class="line">t = <span class="built_in">tuple</span>()              <span class="comment"># 空元组</span></span><br><span class="line"><span class="built_in">print</span>(t)                 <span class="comment"># ()</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="3-3-组包解包与交换"><a href="#3-3-组包解包与交换" class="headerlink" title="3.3 组包解包与交换"></a>3.3 组包解包与交换</h3><ul>
+<li>组包：多个值合进容器（甚至可无括号 <code>5, 7, 9, 1</code>）；解包：容器拆开赋给多个变量。</li>
+<li>变量交换&#x2F;循环交换一行完成（Python 特色，Java&#x2F;C++ 要临时变量）。</li>
+</ul>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">a, b, c = (<span class="number">10</span>, <span class="number">20</span>, <span class="number">30</span>)</span><br><span class="line">a, b, c = b, c, a</span><br><span class="line"><span class="built_in">print</span>(a, b, c)       <span class="comment"># 20 30 10</span></span><br></pre></td></tr></table></figure>
+
+<h2 id="四、集合-set"><a href="#四、集合-set" class="headerlink" title="四、集合 set"></a>四、集合 set</h2><h3 id="4-1-定义与特点"><a href="#4-1-定义与特点" class="headerlink" title="4.1 定义与特点"></a>4.1 定义与特点</h3><ul>
+<li><code>{元素...}</code> 定义；<strong>无序、不可重复、可修改</strong>；不支持索引访问。</li>
+<li>空集合必须用 <code>set()</code>——<strong><code>{}</code> 是空字典</strong>（大坑）。</li>
+</ul>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">s1 = &#123;<span class="number">1</span>, <span class="number">2</span>, <span class="string">&#x27;gm&#x27;</span>, <span class="number">6256</span>, <span class="number">56.2</span>&#125;</span><br><span class="line"><span class="built_in">print</span>(s1, <span class="built_in">type</span>(s1))     <span class="comment"># &#123;6256, 1, 2, 56.2, &#x27;gm&#x27;&#125; &lt;class &#x27;set&#x27;&gt;  ← 打印顺序无序</span></span><br><span class="line">s2 = <span class="built_in">set</span>()              <span class="comment"># 空集合</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="4-2-增删与去重"><a href="#4-2-增删与去重" class="headerlink" title="4.2 增删与去重"></a>4.2 增删与去重</h3><ul>
+<li><code>add()</code> 添加（已存在则自动忽略，<strong>去重</strong>）；<code>remove()</code> 移除（<strong>不存在报错</strong>）；<code>pop()</code> 随机删。</li>
+</ul>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">s1.add(<span class="number">6</span>)</span><br><span class="line">s1.add(<span class="number">1</span>)               <span class="comment"># 已存在，加不进去 → 集合元素唯一</span></span><br><span class="line"><span class="built_in">print</span>(s1)               <span class="comment"># &#123;6256, 1, 2, 6, 56.2, &#x27;gm&#x27;&#125;</span></span><br><span class="line"></span><br><span class="line">s1.remove(<span class="number">56.2</span>)</span><br><span class="line"><span class="comment"># s1.remove(56.2)       # 再删会报 KeyError</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="4-3-集合运算"><a href="#4-3-集合运算" class="headerlink" title="4.3 集合运算"></a>4.3 集合运算</h3><ul>
+<li>方法 <code>difference()</code> 差集 &#x2F; <code>intersection()</code> 交集 &#x2F; <code>union()</code> 并集；运算符 <code>-</code> 差集、<code>&amp;</code> 交集、<code>|</code> 并集。</li>
+</ul>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">s2 = &#123;<span class="number">1</span>, <span class="number">6</span>&#125;</span><br><span class="line"><span class="built_in">print</span>(s1.difference(s2))        <span class="comment"># &#123;6256, 2, &#x27;gm&#x27;&#125;      在 s1 不在 s2</span></span><br><span class="line"><span class="built_in">print</span>(s1.intersection(s2))      <span class="comment"># &#123;1, 6&#125;</span></span><br><span class="line"><span class="built_in">print</span>(s1.union(&#123;<span class="number">1</span>, <span class="number">99</span>&#125;))        <span class="comment"># &#123;6256, 1, 2, &#x27;gm&#x27;, 99, 6&#125;</span></span><br></pre></td></tr></table></figure>
+
+<h2 id="五、字典-dict"><a href="#五、字典-dict" class="headerlink" title="五、字典 dict"></a>五、字典 dict</h2><h3 id="5-1-定义与取值"><a href="#5-1-定义与取值" class="headerlink" title="5.1 定义与取值"></a>5.1 定义与取值</h3><ul>
+<li><code>{key: value}</code> 键值对存储；<strong>key 唯一</strong>（重复定义后面的覆盖前面的）且不能是可变类型；value 任意类型。</li>
+<li>取值：<code>d[key]</code>（<strong>key 不存在抛 KeyError</strong>）；<code>d.get(key)</code> 安全取值（不存在返回 None，可带默认值 <code>d.get(key, 默认)</code>）。</li>
+</ul>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">d = &#123;<span class="string">&quot;name&quot;</span>: <span class="string">&quot;zhangsan&quot;</span>, <span class="string">&quot;age&quot;</span>: <span class="number">18</span>, <span class="string">&quot;h&quot;</span>: <span class="number">180.5</span>&#125;</span><br><span class="line"><span class="built_in">print</span>(d[<span class="string">&quot;name&quot;</span>])        <span class="comment"># zhangsan</span></span><br><span class="line"><span class="built_in">print</span>(d.get(<span class="string">&quot;age&quot;</span>))     <span class="comment"># 18</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="5-2-增删改查"><a href="#5-2-增删改查" class="headerlink" title="5.2 增删改查"></a>5.2 增删改查</h3><table>
+<thead>
+<tr>
+<th>操作</th>
+<th>写法</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>添加&#x2F;修改</td>
+<td><code>d[key] = value</code></td>
+<td>key 不存在&#x3D;新增，存在&#x3D;修改</td>
+</tr>
+<tr>
+<td>删除</td>
+<td><code>d.pop(key)</code></td>
+<td>删除并返回 value</td>
+</tr>
+<tr>
+<td>删除</td>
+<td><code>del d[key]</code></td>
+<td>直接删</td>
+</tr>
+<tr>
+<td>查询</td>
+<td><code>d.keys()</code> &#x2F; <code>d.values()</code> &#x2F; <code>d.items()</code></td>
+<td>取键 &#x2F; 值 &#x2F; 键值对</td>
+</tr>
+</tbody></table>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line">d[<span class="number">20</span>] = <span class="string">&#x27;hello&#x27;</span>              <span class="comment"># 添加（key 可以是数字）</span></span><br><span class="line"><span class="built_in">print</span>(d)                     <span class="comment"># &#123;&#x27;name&#x27;: &#x27;zhangsan&#x27;, &#x27;age&#x27;: 18, &#x27;h&#x27;: 180.5, 20: &#x27;hello&#x27;&#125;</span></span><br><span class="line"></span><br><span class="line">d.pop(<span class="number">20</span>)</span><br><span class="line"><span class="built_in">print</span>(d)                     <span class="comment"># &#123;&#x27;name&#x27;: &#x27;zhangsan&#x27;, &#x27;age&#x27;: 18, &#x27;h&#x27;: 180.5&#125;</span></span><br><span class="line"></span><br><span class="line">e = d.keys()</span><br><span class="line"><span class="built_in">print</span>(e, <span class="built_in">type</span>(e))            <span class="comment"># dict_keys([&#x27;name&#x27;, &#x27;age&#x27;, &#x27;h&#x27;]) &lt;class &#x27;dict_keys&#x27;&gt;</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">for</span> k, v <span class="keyword">in</span> d.items():       <span class="comment"># 遍历键值对</span></span><br><span class="line">    <span class="built_in">print</span>(k, v)</span><br><span class="line"><span class="comment"># name zhangsan</span></span><br><span class="line"><span class="comment"># age 18</span></span><br><span class="line"><span class="comment"># h 180.5</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="5-3-字典推导式（补充，讲义未提）"><a href="#5-3-字典推导式（补充，讲义未提）" class="headerlink" title="5.3 字典推导式（补充，讲义未提）"></a>5.3 字典推导式（补充，讲义未提）</h3><ul>
+<li><code>{key表达式: value表达式 for ...}</code> 一行生成字典。</li>
+</ul>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">a = &#123;x: x ** <span class="number">2</span> <span class="keyword">for</span> x <span class="keyword">in</span> <span class="built_in">range</span>(<span class="number">10</span>)&#125;</span><br><span class="line"><span class="built_in">print</span>(a)</span><br><span class="line"><span class="comment"># &#123;0: 0, 1: 1, 2: 4, 3: 9, 4: 16, 5: 25, 6: 36, 7: 49, 8: 64, 9: 81&#125;</span></span><br></pre></td></tr></table></figure>
+
+<h2 id="六、易踩坑：引用与拷贝、sorted-与-sort"><a href="#六、易踩坑：引用与拷贝、sorted-与-sort" class="headerlink" title="六、易踩坑：引用与拷贝、sorted 与 sort"></a>六、易踩坑：引用与拷贝、sorted 与 sort</h2><h3 id="6-1-b-a-是引用不是拷贝"><a href="#6-1-b-a-是引用不是拷贝" class="headerlink" title="6.1 b = a 是引用不是拷贝"></a>6.1 <code>b = a</code> 是引用不是拷贝</h3><ul>
+<li>直接赋值两个变量指向<strong>同一个列表</strong>，改一个两个都变；真拷贝用 <code>.copy()</code> 或切片 <code>a[:]</code>。</li>
+</ul>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line">a = [<span class="number">1</span>, <span class="number">2</span>, <span class="number">5</span>, <span class="number">8</span>, <span class="number">3</span>]</span><br><span class="line">b = a</span><br><span class="line">a[<span class="number">0</span>] = <span class="number">6</span></span><br><span class="line"><span class="built_in">print</span>(a)    <span class="comment"># [6, 2, 5, 8, 3]</span></span><br><span class="line"><span class="built_in">print</span>(b)    <span class="comment"># [6, 2, 5, 8, 3]      ← b 也变了！</span></span><br><span class="line"></span><br><span class="line">c = a.copy()</span><br><span class="line">d = a[:]                          <span class="comment"># 切片拷贝</span></span><br><span class="line">a.append(<span class="number">100</span>)</span><br><span class="line"><span class="built_in">print</span>(a)    <span class="comment"># [6, 2, 5, 8, 3, 100]</span></span><br><span class="line"><span class="built_in">print</span>(c)    <span class="comment"># [6, 2, 5, 8, 3]      ← 不受影响</span></span><br><span class="line"><span class="built_in">print</span>(d)    <span class="comment"># [6, 2, 5, 8, 3]</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="6-2-sorted-vs-list-sort"><a href="#6-2-sorted-vs-list-sort" class="headerlink" title="6.2 sorted() vs list.sort()"></a>6.2 <code>sorted()</code> vs <code>list.sort()</code></h3><ul>
+<li><code>list.sort()</code> <strong>原地</strong>排序且返回 <strong>None</strong>（别赋值给变量）；<code>sorted(列表)</code> 返回<strong>新列表</strong>，原列表不变。</li>
+</ul>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">a = [<span class="number">6</span>, <span class="number">2</span>, <span class="number">5</span>, <span class="number">8</span>, <span class="number">3</span>, <span class="number">100</span>]</span><br><span class="line"><span class="built_in">print</span>(<span class="built_in">sorted</span>(a))    <span class="comment"># [2, 3, 5, 6, 8, 100]   新列表</span></span><br><span class="line"><span class="built_in">print</span>(a)            <span class="comment"># [6, 2, 5, 8, 3, 100]   原列表不变</span></span><br><span class="line"><span class="built_in">print</span>(a.sort())     <span class="comment"># None                   ← 坑！</span></span><br><span class="line"><span class="built_in">print</span>(a)            <span class="comment"># [2, 3, 5, 6, 8, 100]   原地已排序</span></span><br></pre></td></tr></table></figure>
+
+<h2 id="七、补充小知识（教学讲解，讲义未提）"><a href="#七、补充小知识（教学讲解，讲义未提）" class="headerlink" title="七、补充小知识（教学讲解，讲义未提）"></a>七、补充小知识（教学讲解，讲义未提）</h2><ul>
+<li><strong><code>zip()</code> 并行遍历 &#x2F; 打包</strong>：把多个可迭代对象按位置配对，配 <code>dict()</code> 直接生成字典。</li>
+</ul>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">a = [<span class="number">1</span>, <span class="number">2</span>, <span class="number">3</span>]</span><br><span class="line">b = [<span class="string">&#x27;zhangsan&#x27;</span>, <span class="string">&#x27;lisi&#x27;</span>, <span class="string">&#x27;wangwu&#x27;</span>]</span><br><span class="line"><span class="keyword">for</span> <span class="built_in">id</span>, name <span class="keyword">in</span> <span class="built_in">zip</span>(a, b):</span><br><span class="line">    <span class="built_in">print</span>(<span class="built_in">id</span>, name)</span><br><span class="line"><span class="comment"># 1 zhangsan</span></span><br><span class="line"><span class="comment"># 2 lisi</span></span><br><span class="line"><span class="comment"># 3 wangwu</span></span><br><span class="line"></span><br><span class="line">x = <span class="built_in">dict</span>(<span class="built_in">zip</span>(a, b))</span><br><span class="line"><span class="built_in">print</span>(x)    <span class="comment"># &#123;1: &#x27;zhangsan&#x27;, 2: &#x27;lisi&#x27;, 3: &#x27;wangwu&#x27;&#125;</span></span><br></pre></td></tr></table></figure>
+
+<ul>
+<li>空容器真假：空列表&#x2F;空字典&#x2F;空集合都是 <code>False</code>，非空为 <code>True</code>（<code>[0]</code> 非空，为真）。</li>
+</ul>
+<h2 id="今日总结"><a href="#今日总结" class="headerlink" title="今日总结"></a>今日总结</h2><table>
+<thead>
+<tr>
+<th>容器</th>
+<th>定义</th>
+<th>核心特点</th>
+<th>关键操作</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>列表 list</td>
+<td><code>[元素]</code></td>
+<td>有序、可重复、可变、可异构</td>
+<td>append&#x2F;insert&#x2F;remove&#x2F;sort&#x2F;reverse；切片；推导式；<code>+</code>&#x2F;<code>*</code> 合并</td>
+</tr>
+<tr>
+<td>字符串 str</td>
+<td><code>&quot;...&quot;</code></td>
+<td>有序、<strong>不可变</strong></td>
+<td>find&#x2F;count&#x2F;split&#x2F;strip&#x2F;replace&#x2F;startswith；切片反转</td>
+</tr>
+<tr>
+<td>元组 tuple</td>
+<td><code>(元素,)</code></td>
+<td>有序、不可变</td>
+<td>count&#x2F;index；单元素加逗号；解包交换</td>
+</tr>
+<tr>
+<td>集合 set</td>
+<td><code>{元素}</code></td>
+<td>无序、<strong>去重</strong>、可变</td>
+<td>add&#x2F;remove；difference&#x2F;intersection&#x2F;union；<code>&amp;</code>&#x2F;<code>|</code>&#x2F;<code>-</code></td>
+</tr>
+<tr>
+<td>字典 dict</td>
+<td><code>{k: v}</code></td>
+<td>key 唯一、可变</td>
+<td><code>d[k]</code>&#x2F;<code>get</code>；增改 <code>d[k]=v</code>；pop&#x2F;del；keys&#x2F;values&#x2F;items；推导式</td>
+</tr>
+</tbody></table>
+<p>三大 Python 特色必须掌握：<strong>切片 <code>s[start:end:step]</code>（不含 end、可负索引）、推导式 <code>[表达式 for i in 数据 if 条件]</code>、组包解包 <code>a, b = b, a</code> &#x2F; <code>x, *y = 列表</code></strong>。</p>
+<p>易踩坑：<code>b = a</code> 是引用要拷贝用 <code>.copy()</code>&#x2F;<code>a[:]</code>；<code>sort()</code> 返回 None 而 <code>sorted()</code> 返回新列表；空集合是 <code>set()</code> 不是 <code>{}</code>；<code>d[key]</code> 不存在抛 KeyError 用 <code>get</code>；单元素元组要写 <code>(5,)</code>。</p>
+
+      </div>
+
+    
+    
+    
+
+      <footer class="post-footer">
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/2026/10/04/python/02%20%E6%B5%81%E7%A8%8B%E6%8E%A7%E5%88%B6%EF%BC%9A%E6%9D%A1%E4%BB%B6%E5%88%A4%E6%96%AD%E3%80%81%E6%A8%A1%E5%BC%8F%E5%8C%B9%E9%85%8D%E4%B8%8E%E5%BE%AA%E7%8E%AF/" rel="prev" title="02 流程控制：条件判断、模式匹配与循环">
+      <i class="fa fa-chevron-left"></i> 02 流程控制：条件判断、模式匹配与循环
+    </a></div>
+      <div class="post-nav-item"></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+
+
+          </div>
+          
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#03-%E6%95%B0%E6%8D%AE%E5%AE%B9%E5%99%A8%EF%BC%9A%E5%88%97%E8%A1%A8%E3%80%81%E5%AD%97%E7%AC%A6%E4%B8%B2%E3%80%81%E5%85%83%E7%BB%84%E3%80%81%E9%9B%86%E5%90%88%E4%B8%8E%E5%AD%97%E5%85%B8"><span class="nav-number">1.</span> <span class="nav-text">03 数据容器：列表、字符串、元组、集合与字典</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%80%E3%80%81%E5%88%97%E8%A1%A8-list"><span class="nav-number">1.1.</span> <span class="nav-text">一、列表 list</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#1-1-%E5%AE%9A%E4%B9%89%E4%B8%8E%E7%89%B9%E7%82%B9"><span class="nav-number">1.1.1.</span> <span class="nav-text">1.1 定义与特点</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#1-2-%E7%B4%A2%E5%BC%95%E4%B8%8E%E5%88%87%E7%89%87"><span class="nav-number">1.1.2.</span> <span class="nav-text">1.2 索引与切片</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#1-3-%E5%B8%B8%E7%94%A8%E6%96%B9%E6%B3%95"><span class="nav-number">1.1.3.</span> <span class="nav-text">1.3 常用方法</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#1-4-%E7%BB%9F%E8%AE%A1%E5%87%BD%E6%95%B0"><span class="nav-number">1.1.4.</span> <span class="nav-text">1.4 统计函数</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#1-5-%E5%90%88%E5%B9%B6%E3%80%81%E8%A7%A3%E5%8C%85%E4%B8%8E%E5%AD%98%E5%9C%A8%E5%88%A4%E6%96%AD"><span class="nav-number">1.1.5.</span> <span class="nav-text">1.5 合并、解包与存在判断</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#1-6-%E6%89%A9%E5%B1%95%E8%A7%A3%E5%8C%85%EF%BC%88Python-%E7%89%B9%E8%89%B2%EF%BC%89"><span class="nav-number">1.1.6.</span> <span class="nav-text">1.6 扩展解包（Python 特色）</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#1-7-%E5%88%97%E8%A1%A8%E6%8E%A8%E5%AF%BC%E5%BC%8F"><span class="nav-number">1.1.7.</span> <span class="nav-text">1.7 列表推导式</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BA%8C%E3%80%81%E5%AD%97%E7%AC%A6%E4%B8%B2-str"><span class="nav-number">1.2.</span> <span class="nav-text">二、字符串 str</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#2-1-%E4%B8%8D%E5%8F%AF%E5%8F%98%E6%80%A7"><span class="nav-number">1.2.1.</span> <span class="nav-text">2.1 不可变性</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2-2-%E5%88%87%E7%89%87"><span class="nav-number">1.2.2.</span> <span class="nav-text">2.2 切片</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2-3-%E5%B8%B8%E7%94%A8%E6%96%B9%E6%B3%95"><span class="nav-number">1.2.3.</span> <span class="nav-text">2.3 常用方法</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2-4-join-%EF%BC%9Asplit-%E7%9A%84%E5%8F%8D%E5%90%91%E6%93%8D%E4%BD%9C%EF%BC%88%E8%A1%A5%E5%85%85%EF%BC%89"><span class="nav-number">1.2.4.</span> <span class="nav-text">2.4 join()：split 的反向操作（补充）</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%89%E3%80%81%E5%85%83%E7%BB%84-tuple"><span class="nav-number">1.3.</span> <span class="nav-text">三、元组 tuple</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#3-1-%E5%AE%9A%E4%B9%89%E4%B8%8E%E7%89%B9%E7%82%B9"><span class="nav-number">1.3.1.</span> <span class="nav-text">3.1 定义与特点</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#3-2-%E5%8D%95%E5%85%83%E7%B4%A0%E5%85%83%E7%BB%84%E7%9A%84%E5%9D%91"><span class="nav-number">1.3.2.</span> <span class="nav-text">3.2 单元素元组的坑</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#3-3-%E7%BB%84%E5%8C%85%E8%A7%A3%E5%8C%85%E4%B8%8E%E4%BA%A4%E6%8D%A2"><span class="nav-number">1.3.3.</span> <span class="nav-text">3.3 组包解包与交换</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%9B%9B%E3%80%81%E9%9B%86%E5%90%88-set"><span class="nav-number">1.4.</span> <span class="nav-text">四、集合 set</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#4-1-%E5%AE%9A%E4%B9%89%E4%B8%8E%E7%89%B9%E7%82%B9"><span class="nav-number">1.4.1.</span> <span class="nav-text">4.1 定义与特点</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#4-2-%E5%A2%9E%E5%88%A0%E4%B8%8E%E5%8E%BB%E9%87%8D"><span class="nav-number">1.4.2.</span> <span class="nav-text">4.2 增删与去重</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#4-3-%E9%9B%86%E5%90%88%E8%BF%90%E7%AE%97"><span class="nav-number">1.4.3.</span> <span class="nav-text">4.3 集合运算</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BA%94%E3%80%81%E5%AD%97%E5%85%B8-dict"><span class="nav-number">1.5.</span> <span class="nav-text">五、字典 dict</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#5-1-%E5%AE%9A%E4%B9%89%E4%B8%8E%E5%8F%96%E5%80%BC"><span class="nav-number">1.5.1.</span> <span class="nav-text">5.1 定义与取值</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#5-2-%E5%A2%9E%E5%88%A0%E6%94%B9%E6%9F%A5"><span class="nav-number">1.5.2.</span> <span class="nav-text">5.2 增删改查</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#5-3-%E5%AD%97%E5%85%B8%E6%8E%A8%E5%AF%BC%E5%BC%8F%EF%BC%88%E8%A1%A5%E5%85%85%EF%BC%8C%E8%AE%B2%E4%B9%89%E6%9C%AA%E6%8F%90%EF%BC%89"><span class="nav-number">1.5.3.</span> <span class="nav-text">5.3 字典推导式（补充，讲义未提）</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%85%AD%E3%80%81%E6%98%93%E8%B8%A9%E5%9D%91%EF%BC%9A%E5%BC%95%E7%94%A8%E4%B8%8E%E6%8B%B7%E8%B4%9D%E3%80%81sorted-%E4%B8%8E-sort"><span class="nav-number">1.6.</span> <span class="nav-text">六、易踩坑：引用与拷贝、sorted 与 sort</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#6-1-b-a-%E6%98%AF%E5%BC%95%E7%94%A8%E4%B8%8D%E6%98%AF%E6%8B%B7%E8%B4%9D"><span class="nav-number">1.6.1.</span> <span class="nav-text">6.1 b &#x3D; a 是引用不是拷贝</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#6-2-sorted-vs-list-sort"><span class="nav-number">1.6.2.</span> <span class="nav-text">6.2 sorted() vs list.sort()</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%83%E3%80%81%E8%A1%A5%E5%85%85%E5%B0%8F%E7%9F%A5%E8%AF%86%EF%BC%88%E6%95%99%E5%AD%A6%E8%AE%B2%E8%A7%A3%EF%BC%8C%E8%AE%B2%E4%B9%89%E6%9C%AA%E6%8F%90%EF%BC%89"><span class="nav-number">1.7.</span> <span class="nav-text">七、补充小知识（教学讲解，讲义未提）</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BB%8A%E6%97%A5%E6%80%BB%E7%BB%93"><span class="nav-number">1.8.</span> <span class="nav-text">今日总结</span></a></li></ol></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="ZHX"
+      src="/images/avatar.jpeg">
+  <p class="site-author-name" itemprop="name">ZHX</p>
+  <div class="site-description" itemprop="description">记录编程学习、项目实战和踩坑笔记</div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">66</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+            <a href="/categories/">
+          
+        <span class="site-state-item-count">12</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+  </nav>
+</div>
+
+
+
+      </div>
+        <div class="back-to-top motion-element">
+          <i class="fa fa-arrow-up"></i>
+          <span>0%</span>
+        </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2026</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">ZHX</span>
+</div>
+  <div class="powered-by">由 <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Gemini</a> 强力驱动
+  </div>
+
+        
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/pisces.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+
+</body>
+</html>

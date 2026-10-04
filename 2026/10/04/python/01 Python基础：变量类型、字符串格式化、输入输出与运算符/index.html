@@ -1,0 +1,631 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 8.1.2">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/favicon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon.png">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/all.min.css">
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"www.blog-x.cc.cd","root":"/","scheme":"Gemini","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"always","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":false,"show_result":false,"style":null},"back2top":{"enable":true,"sidebar":true,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":false,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}}};
+  </script>
+
+  <meta name="description" content="01 Python基础：变量类型、字符串格式化、输入输出与运算符 学习方式：对照黑马 Python+AI 讲义第 2 章第 1 节（数据存储与运算）边看边敲，代码验证文件 01.py。已有 C++&#x2F;Java 基础，重点记录 Python 与它们的写法差异。  一、变量与动态类型1.1 变量与字面量 字面量：程序中直接书写的固定值，如 10、8.5、&quot;Python&quot;、T">
+<meta property="og:type" content="article">
+<meta property="og:title" content="01 Python基础：变量类型、字符串格式化、输入输出与运算符">
+<meta property="og:url" content="https://www.blog-x.cc.cd/2026/10/04/python/01%20Python%E5%9F%BA%E7%A1%80%EF%BC%9A%E5%8F%98%E9%87%8F%E7%B1%BB%E5%9E%8B%E3%80%81%E5%AD%97%E7%AC%A6%E4%B8%B2%E6%A0%BC%E5%BC%8F%E5%8C%96%E3%80%81%E8%BE%93%E5%85%A5%E8%BE%93%E5%87%BA%E4%B8%8E%E8%BF%90%E7%AE%97%E7%AC%A6/index.html">
+<meta property="og:site_name" content="我的学习日记">
+<meta property="og:description" content="01 Python基础：变量类型、字符串格式化、输入输出与运算符 学习方式：对照黑马 Python+AI 讲义第 2 章第 1 节（数据存储与运算）边看边敲，代码验证文件 01.py。已有 C++&#x2F;Java 基础，重点记录 Python 与它们的写法差异。  一、变量与动态类型1.1 变量与字面量 字面量：程序中直接书写的固定值，如 10、8.5、&quot;Python&quot;、T">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2026-10-04T12:20:46.000Z">
+<meta property="article:modified_time" content="2026-10-04T15:15:37.443Z">
+<meta property="article:author" content="ZHX">
+<meta name="twitter:card" content="summary">
+
+<link rel="canonical" href="https://www.blog-x.cc.cd/2026/10/04/python/01%20Python%E5%9F%BA%E7%A1%80%EF%BC%9A%E5%8F%98%E9%87%8F%E7%B1%BB%E5%9E%8B%E3%80%81%E5%AD%97%E7%AC%A6%E4%B8%B2%E6%A0%BC%E5%BC%8F%E5%8C%96%E3%80%81%E8%BE%93%E5%85%A5%E8%BE%93%E5%87%BA%E4%B8%8E%E8%BF%90%E7%AE%97%E7%AC%A6/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'zh-CN'
+  };
+</script>
+
+  <title>01 Python基础：变量类型、字符串格式化、输入输出与运算符 | 我的学习日记</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">我的学习日记</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="main-menu menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档<span class="badge">66</span></a>
+
+  </li>
+        <li class="menu-item menu-item-categories">
+
+    <a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分类<span class="badge">12</span></a>
+
+  </li>
+        <li class="menu-item menu-item-about">
+
+    <a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>关于</a>
+
+  </li>
+        <li class="menu-item menu-item-tags">
+
+    <a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签<span class="badge">0</span></a>
+
+  </li>
+  </ul>
+</nav>
+
+
+
+
+</div>
+    </header>
+
+    
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://www.blog-x.cc.cd/2026/10/04/python/01%20Python%E5%9F%BA%E7%A1%80%EF%BC%9A%E5%8F%98%E9%87%8F%E7%B1%BB%E5%9E%8B%E3%80%81%E5%AD%97%E7%AC%A6%E4%B8%B2%E6%A0%BC%E5%BC%8F%E5%8C%96%E3%80%81%E8%BE%93%E5%85%A5%E8%BE%93%E5%87%BA%E4%B8%8E%E8%BF%90%E7%AE%97%E7%AC%A6/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.jpeg">
+      <meta itemprop="name" content="ZHX">
+      <meta itemprop="description" content="记录编程学习、项目实战和踩坑笔记">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="我的学习日记">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          01 Python基础：变量类型、字符串格式化、输入输出与运算符
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+              
+
+              <time title="创建时间：2026-10-04 20:20:46 / 修改时间：23:15:37" itemprop="dateCreated datePublished" datetime="2026-10-04T20:20:46+08:00">2026-10-04</time>
+            </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/python/" itemprop="url" rel="index"><span itemprop="name">python</span></a>
+                </span>
+                  ，
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/python/%E5%9F%BA%E7%A1%80%E8%AF%AD%E6%B3%95/" itemprop="url" rel="index"><span itemprop="name">基础语法</span></a>
+                </span>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+      <div class="post-body" itemprop="articleBody">
+
+        
+          <h1 id="01-Python基础：变量类型、字符串格式化、输入输出与运算符"><a href="#01-Python基础：变量类型、字符串格式化、输入输出与运算符" class="headerlink" title="01 Python基础：变量类型、字符串格式化、输入输出与运算符"></a>01 Python基础：变量类型、字符串格式化、输入输出与运算符</h1><blockquote>
+<p>学习方式：对照黑马 Python+AI 讲义第 2 章第 1 节（数据存储与运算）边看边敲，代码验证文件 <code>01.py</code>。已有 C++&#x2F;Java 基础，重点记录 Python 与它们的写法差异。</p>
+</blockquote>
+<h2 id="一、变量与动态类型"><a href="#一、变量与动态类型" class="headerlink" title="一、变量与动态类型"></a>一、变量与动态类型</h2><h3 id="1-1-变量与字面量"><a href="#1-1-变量与字面量" class="headerlink" title="1.1 变量与字面量"></a>1.1 变量与字面量</h3><ul>
+<li><strong>字面量</strong>：程序中直接书写的固定值，如 <code>10</code>、<code>8.5</code>、<code>&quot;Python&quot;</code>、<code>True</code>、<code>None</code>。</li>
+<li><strong>变量</strong>：存储单个数据的容器，定义格式 <code>变量名 = 值</code>，如 <code>num = 1114.1</code>。</li>
+<li><strong>动态类型</strong>：Python 是动态类型语言，变量不需要声明类型，类型由当前存的值决定，可以反复赋不同类型的值。这是与 C++&#x2F;Java 静态类型最大的差异。</li>
+</ul>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">a = <span class="number">10</span>          <span class="comment"># 此时 a 是 int</span></span><br><span class="line">a = <span class="number">12.5</span>        <span class="comment"># 重新赋值为 float，无需任何声明</span></span><br><span class="line">a = <span class="string">&#x27;hello&#x27;</span>     <span class="comment"># 再赋值为 str</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="1-2-五大基础数据类型"><a href="#1-2-五大基础数据类型" class="headerlink" title="1.2 五大基础数据类型"></a>1.2 五大基础数据类型</h3><table>
+<thead>
+<tr>
+<th>类型</th>
+<th>说明</th>
+<th>示例</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>int</code></td>
+<td>整数</td>
+<td><code>10</code>、<code>-5</code></td>
+</tr>
+<tr>
+<td><code>float</code></td>
+<td>浮点数</td>
+<td><code>8.5</code>、<code>3.14</code></td>
+</tr>
+<tr>
+<td><code>str</code></td>
+<td>字符串</td>
+<td><code>&quot;Python&quot;</code></td>
+</tr>
+<tr>
+<td><code>bool</code></td>
+<td>布尔</td>
+<td><code>True</code>、<code>False</code></td>
+</tr>
+<tr>
+<td><code>NoneType</code></td>
+<td>空值</td>
+<td><code>None</code></td>
+</tr>
+</tbody></table>
+<p>实际验证（<code>01.py</code>）：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">a = <span class="number">10</span></span><br><span class="line"><span class="built_in">print</span>(a, <span class="built_in">type</span>(a))        <span class="comment"># 10 &lt;class &#x27;int&#x27;&gt;</span></span><br><span class="line">a = <span class="number">12.5</span></span><br><span class="line"><span class="built_in">print</span>(a, <span class="built_in">type</span>(a))        <span class="comment"># 12.5 &lt;class &#x27;float&#x27;&gt;</span></span><br><span class="line">a = <span class="string">&#x27;hello&#x27;</span></span><br><span class="line"><span class="built_in">print</span>(a, <span class="built_in">type</span>(a))        <span class="comment"># hello &lt;class &#x27;str&#x27;&gt;</span></span><br><span class="line">a = <span class="literal">True</span></span><br><span class="line"><span class="built_in">print</span>(a, <span class="built_in">type</span>(a))        <span class="comment"># True &lt;class &#x27;bool&#x27;&gt;</span></span><br><span class="line">a = <span class="literal">None</span></span><br><span class="line"><span class="built_in">print</span>(a, <span class="built_in">type</span>(a))        <span class="comment"># None &lt;class &#x27;NoneType&#x27;&gt;</span></span><br></pre></td></tr></table></figure>
+
+<p>注意两点：</p>
+<ul>
+<li>布尔本质是数字，参与运算时 <code>True</code> 当 <code>1</code>、<code>False</code> 当 <code>0</code>。</li>
+<li>变量本身没有类型，<code>type(变量)</code> 输出的是<strong>变量中存储的数据的类型</strong>。</li>
+</ul>
+<h3 id="1-3-类型判断：type-与-isinstance"><a href="#1-3-类型判断：type-与-isinstance" class="headerlink" title="1.3 类型判断：type() 与 isinstance()"></a>1.3 类型判断：type() 与 isinstance()</h3><ul>
+<li><code>type(数据)</code>：返回数据的确切类型（用于调试查看）。</li>
+<li><code>isinstance(数据, 类型)</code>：判断数据是否属于某类型，返回布尔，<strong>子类也算</strong>（面向对象中猫属于动物）。</li>
+</ul>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">num = <span class="number">5.0</span></span><br><span class="line"><span class="built_in">print</span>(<span class="built_in">isinstance</span>(num, <span class="built_in">int</span>))    <span class="comment"># False</span></span><br><span class="line"><span class="built_in">print</span>(<span class="built_in">isinstance</span>(num, <span class="built_in">float</span>))  <span class="comment"># True</span></span><br><span class="line"><span class="built_in">print</span>(<span class="built_in">type</span>(num))               <span class="comment"># &lt;class &#x27;float&#x27;&gt;</span></span><br></pre></td></tr></table></figure>
+
+<p>写判断逻辑优先用 <code>isinstance</code>，它支持一次判断多个类型（传元组）：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">x = <span class="number">3.14</span></span><br><span class="line"><span class="built_in">print</span>(<span class="built_in">isinstance</span>(x, (<span class="built_in">int</span>, <span class="built_in">float</span>)))   <span class="comment"># True，x 是数字</span></span><br></pre></td></tr></table></figure>
+
+<p>两个容易踩的点：</p>
+<ul>
+<li><strong><code>bool</code> 是 <code>int</code> 的子类</strong>：<code>isinstance(True, int)</code> 结果为 <code>True</code>。想严格区分布尔，要先 <code>isinstance(x, bool)</code> 或直接用 <code>type(x) == bool</code>。</li>
+<li><strong>判断 None 不要用 <code>isinstance(x, None)</code></strong>（<code>None</code> 不是类型，会报错），标准写法是 <code>x is None</code>；如果非要用 isinstance，写 <code>isinstance(x, type(None))</code>。判断”非 None 且有内容”用 <code>if x is not None</code>。</li>
+</ul>
+<h2 id="二、字符串：定义、拼接与格式化"><a href="#二、字符串：定义、拼接与格式化" class="headerlink" title="二、字符串：定义、拼接与格式化"></a>二、字符串：定义、拼接与格式化</h2><h3 id="2-1-三种定义方式"><a href="#2-1-三种定义方式" class="headerlink" title="2.1 三种定义方式"></a>2.1 三种定义方式</h3><figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">a = <span class="string">&#x27;hello&#x27;</span>                  <span class="comment"># 单引号</span></span><br><span class="line">a = <span class="string">&quot;world&quot;</span>                  <span class="comment"># 双引号（单双引号等效，项目中保持一种）</span></span><br><span class="line">a = <span class="string">&quot;&quot;&quot;hellowor</span></span><br><span class="line"><span class="string">ld&quot;&quot;&quot;</span>                        <span class="comment"># 三引号，支持多行</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="2-2-拼接与格式化三种方式"><a href="#2-2-拼接与格式化三种方式" class="headerlink" title="2.2 拼接与格式化三种方式"></a>2.2 拼接与格式化三种方式</h3><p>拼接用 <code>+</code>，但只能拼字符串，非字符串必须先 <code>str()</code> 转换；拼接繁琐，实际更常用格式化。</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">name = <span class="string">&#x27;小明&#x27;</span></span><br><span class="line">age = <span class="number">21</span></span><br><span class="line"><span class="built_in">print</span>(<span class="built_in">str</span>(name) + <span class="string">&quot;今年&quot;</span> + <span class="built_in">str</span>(age) + <span class="string">&quot;岁&quot;</span>)   <span class="comment"># 拼接，需手动转 str</span></span><br><span class="line"><span class="built_in">print</span>(<span class="string">&#x27;%s 今年 %s 岁&#x27;</span> % (name, age))          <span class="comment"># % 占位符，%s 表示字符串</span></span><br><span class="line"><span class="built_in">print</span>(<span class="string">f&#x27;<span class="subst">&#123;name&#125;</span>今年<span class="subst">&#123;age&#125;</span>岁了&#x27;</span>)                  <span class="comment"># f-string，推荐</span></span><br></pre></td></tr></table></figure>
+
+<p>三种方式中 <strong>f-string 最推荐</strong>：直接写 <code>f&quot;{变量}&quot;</code>，不用类型转换，可读性最好。</p>
+<h3 id="2-3-f-string-进阶格式（组合顺序）"><a href="#2-3-f-string-进阶格式（组合顺序）" class="headerlink" title="2.3 f-string 进阶格式（组合顺序）"></a>2.3 f-string 进阶格式（组合顺序）</h3><p>格式说明符完整顺序：<code>对齐 + 宽度 + 千分位 + 精度 + 类型</code>。</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">x = <span class="number">1234.5678</span></span><br><span class="line"><span class="built_in">print</span>(<span class="string">f&quot;<span class="subst">&#123;x:<span class="number">.2</span>f&#125;</span>&quot;</span>)           <span class="comment"># 1234.57    保留两位小数（类型 f = 浮点）</span></span><br><span class="line"><span class="built_in">print</span>(<span class="string">f&quot;<span class="subst">&#123;x:,<span class="number">.0</span>f&#125;</span>&quot;</span>)          <span class="comment"># 1,235      千分位</span></span><br><span class="line"><span class="built_in">print</span>(<span class="string">f&quot;<span class="subst">&#123;x:&gt;<span class="number">10.1</span>f&#125;</span>&quot;</span>)        <span class="comment"># 右对齐占 10 位，做表格对齐</span></span><br><span class="line"><span class="built_in">print</span>(<span class="string">f&quot;<span class="subst">&#123;x:&lt;<span class="number">10.1</span>f&#125;</span>&quot;</span>)        <span class="comment"># 左对齐</span></span><br><span class="line"><span class="built_in">print</span>(<span class="string">f&quot;<span class="subst">&#123;x:&gt;<span class="number">10</span>,<span class="number">.2</span>f&#125;</span>&quot;</span>)       <span class="comment">#   1,234.57 对齐+千分位+精度，组合顺序：对齐宽度在前，逗号中间，精度最后</span></span><br></pre></td></tr></table></figure>
+
+<table>
+<thead>
+<tr>
+<th>位置</th>
+<th>写法</th>
+<th>示例</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>对齐</td>
+<td><code>&gt;</code>右、<code>&lt;</code>左、<code>^</code>居中（必须和宽度成对）</td>
+<td><code>&gt;10</code></td>
+</tr>
+<tr>
+<td>宽度</td>
+<td>数字</td>
+<td><code>10</code></td>
+</tr>
+<tr>
+<td>千分位</td>
+<td>逗号</td>
+<td><code>,</code></td>
+</tr>
+<tr>
+<td>精度</td>
+<td><code>.数字</code></td>
+<td><code>.2</code></td>
+</tr>
+<tr>
+<td>类型</td>
+<td><code>f</code> 浮点 &#x2F; <code>d</code> 十进制整数 &#x2F; <code>%</code> 百分比 &#x2F; <code>x</code> 十六进制等</td>
+<td><code>f</code></td>
+</tr>
+</tbody></table>
+<p>类型说明符区分：</p>
+<ul>
+<li><code>f</code> 是浮点，<strong>可以用精度</strong>（<code>:.2f</code> 控制小数位）。</li>
+<li><code>d</code> 是十进制整数，<strong>不能用精度</strong>（<code>f&quot;{255:.2d}&quot;</code> 会报错），补位用零填充 <code>f&quot;{255:05d}&quot;</code> → <code>00255</code>，千分位 <code>f&quot;{1234567:,d}&quot;</code> → <code>1,234,567</code>。</li>
+<li><code>%</code> 也是类型位，排在最后，会<strong>自动把值乘 100</strong> 再加百分号：<code>f&quot;{0.2567:.1%}&quot;</code> → <code>25.7%</code>，不要自己再乘一次。</li>
+</ul>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">print</span>(<span class="string">f&quot;<span class="subst">&#123;<span class="number">1234.5678</span>:&gt;<span class="number">10</span>,<span class="number">.2</span>%&#125;</span>&quot;</span>)   <span class="comment"># 123,456.78% 全组合：右对齐+千分位+2位小数+百分比</span></span><br></pre></td></tr></table></figure>
+
+<h2 id="三、输入输出与类型转换"><a href="#三、输入输出与类型转换" class="headerlink" title="三、输入输出与类型转换"></a>三、输入输出与类型转换</h2><h3 id="3-1-input-永远返回字符串"><a href="#3-1-input-永远返回字符串" class="headerlink" title="3.1 input() 永远返回字符串"></a>3.1 input() 永远返回字符串</h3><figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">name = <span class="built_in">input</span>(<span class="string">&#x27;请输入姓名:&#x27;</span>)</span><br><span class="line">age = <span class="built_in">input</span>(<span class="string">&#x27;请输入年龄:&#x27;</span>)</span><br><span class="line"><span class="built_in">print</span>(<span class="string">f&#x27;<span class="subst">&#123;name&#125;</span>今年<span class="subst">&#123;age&#125;</span>岁了&#x27;</span>)</span><br></pre></td></tr></table></figure>
+
+<p><code>input()</code> 无论键盘输入什么，得到的<strong>永远是字符串</strong>。要参与数学运算必须先转换类型。</p>
+<h3 id="3-2-类型转换"><a href="#3-2-类型转换" class="headerlink" title="3.2 类型转换"></a>3.2 类型转换</h3><p><code>int(数据)</code>、<code>float(数据)</code>、<code>str(数据)</code>、<code>bool(数据)</code>。</p>
+<p>实际验证（<code>01.py</code>，输入 <code>50</code>）：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">a = <span class="built_in">input</span>()</span><br><span class="line"><span class="built_in">print</span>(a, <span class="built_in">type</span>(a))      <span class="comment"># 50 &lt;class &#x27;str&#x27;&gt;</span></span><br><span class="line">a = <span class="built_in">int</span>(a)</span><br><span class="line"><span class="built_in">print</span>(a, <span class="built_in">type</span>(a))      <span class="comment"># 50 &lt;class &#x27;int&#x27;&gt;</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="3-3-print-的-sep-与-end"><a href="#3-3-print-的-sep-与-end" class="headerlink" title="3.3 print() 的 sep 与 end"></a>3.3 print() 的 sep 与 end</h3><p><code>sep</code> 控制多个值之间的分隔符（默认空格），<code>end</code> 控制结尾字符（默认换行）：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">print</span>(<span class="number">1</span>, <span class="number">2</span>, <span class="number">3</span>, sep=<span class="string">&#x27;~&#x27;</span>, end=<span class="string">&#x27;!&#x27;</span>)   <span class="comment"># 1~2~3!</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="3-4-一行输入多个值：split"><a href="#3-4-一行输入多个值：split" class="headerlink" title="3.4 一行输入多个值：split()"></a>3.4 一行输入多个值：split()</h3><figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">a, b = <span class="built_in">input</span>().split()    <span class="comment"># 输入 &quot;5 9&quot;，a=&#x27;5&#x27;，b=&#x27;9&#x27;（仍是字符串）</span></span><br><span class="line"><span class="built_in">print</span>(a, b)               <span class="comment"># 5 9</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># split() 默认按空白切分，也能拆字符串：</span></span><br><span class="line">a = <span class="string">&#x27;1 2 3 4\n5&#x27;</span></span><br><span class="line"><span class="built_in">print</span>(a.split())          <span class="comment"># [&#x27;1&#x27;, &#x27;2&#x27;, &#x27;3&#x27;, &#x27;4&#x27;, &#x27;5&#x27;]</span></span><br></pre></td></tr></table></figure>
+
+<h2 id="四、运算符与表达式"><a href="#四、运算符与表达式" class="headerlink" title="四、运算符与表达式"></a>四、运算符与表达式</h2><h3 id="4-1-算术运算符及结果类型"><a href="#4-1-算术运算符及结果类型" class="headerlink" title="4.1 算术运算符及结果类型"></a>4.1 算术运算符及结果类型</h3><table>
+<thead>
+<tr>
+<th>运算符</th>
+<th>含义</th>
+<th>示例</th>
+<th>结果</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>/</code></td>
+<td>除法，<strong>结果永远是浮点</strong></td>
+<td><code>5/2</code></td>
+<td><code>2.5</code>（float）</td>
+</tr>
+<tr>
+<td><code>//</code></td>
+<td>整除（向下取整）</td>
+<td><code>5//2</code></td>
+<td><code>2</code>（int）</td>
+</tr>
+<tr>
+<td><code>%</code></td>
+<td>取余</td>
+<td><code>5%2</code></td>
+<td><code>1</code></td>
+</tr>
+<tr>
+<td><code>**</code></td>
+<td>幂</td>
+<td><code>2**3</code></td>
+<td><code>8</code></td>
+</tr>
+</tbody></table>
+<p>实际验证（<code>01.py</code> 的运行结果，注意类型跟随结果变化）：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">print</span>(<span class="string">&quot;1+2=&quot;</span>, <span class="number">1</span>+<span class="number">2</span>, <span class="built_in">type</span>(<span class="number">1</span>+<span class="number">2</span>))        <span class="comment"># 3 &lt;class &#x27;int&#x27;&gt;</span></span><br><span class="line"><span class="built_in">print</span>(<span class="string">&quot;1+2.3=&quot;</span>, <span class="number">1</span>+<span class="number">2.3</span>, <span class="built_in">type</span>(<span class="number">1</span>+<span class="number">2.3</span>))  <span class="comment"># 3.3 &lt;class &#x27;float&#x27;&gt;</span></span><br><span class="line"><span class="built_in">print</span>(<span class="string">&quot;5/2=&quot;</span>, <span class="number">5</span>/<span class="number">2</span>, <span class="built_in">type</span>(<span class="number">5</span>/<span class="number">2</span>))        <span class="comment"># 2.5 &lt;class &#x27;float&#x27;&gt;  ← 除法永远是浮点</span></span><br><span class="line"><span class="built_in">print</span>(<span class="string">&quot;5//2=&quot;</span>, <span class="number">5</span>//<span class="number">2</span>, <span class="built_in">type</span>(<span class="number">5</span>//<span class="number">2</span>))     <span class="comment"># 2 &lt;class &#x27;int&#x27;&gt;</span></span><br><span class="line"><span class="built_in">print</span>(<span class="string">&quot;5%2&quot;</span>, <span class="number">5</span>%<span class="number">2</span>, <span class="built_in">type</span>(<span class="number">5</span>%<span class="number">2</span>))         <span class="comment"># 1 &lt;class &#x27;int&#x27;&gt;</span></span><br><span class="line"><span class="built_in">print</span>(<span class="string">&quot;2**3&quot;</span>, <span class="number">2</span>**<span class="number">3</span>, <span class="built_in">type</span>(<span class="number">2</span>**<span class="number">3</span>))      <span class="comment"># 8 &lt;class &#x27;int&#x27;&gt;</span></span><br></pre></td></tr></table></figure>
+
+<p>Python 没有 <code>++</code>&#x2F;<code>--</code> 自增自减，递增写 <code>x += 1</code>。</p>
+<h3 id="4-2-浮点精度问题"><a href="#4-2-浮点精度问题" class="headerlink" title="4.2 浮点精度问题"></a>4.2 浮点精度问题</h3><figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">print</span>(<span class="number">0.1</span>+<span class="number">0.2</span>, <span class="built_in">type</span>(<span class="number">0.1</span>+<span class="number">0.2</span>))</span><br><span class="line"><span class="comment"># 0.30000000000000004 &lt;class &#x27;float&#x27;&gt;</span></span><br></pre></td></tr></table></figure>
+
+<p>二进制无法精确表示所有小数，浮点运算可能损失精度。涉及金额等精确计算不要用 float（见 5.2 Decimal）。</p>
+<h3 id="4-3-链式比较"><a href="#4-3-链式比较" class="headerlink" title="4.3 链式比较"></a>4.3 链式比较</h3><p>Python 特有（C++&#x2F;Java 不能这样写），连续比较等价于用 <code>and</code> 连接：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">print</span>(<span class="number">1</span> &lt; <span class="number">2</span> &lt; <span class="number">3</span>)         <span class="comment"># True</span></span><br><span class="line"><span class="built_in">print</span>(<span class="number">1</span> &lt; <span class="number">2</span> <span class="keyword">and</span> <span class="number">2</span> &lt; <span class="number">3</span>)   <span class="comment"># True（等价写法）</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="4-4-divmod-一次拿商和余数"><a href="#4-4-divmod-一次拿商和余数" class="headerlink" title="4.4 divmod() 一次拿商和余数"></a>4.4 divmod() 一次拿商和余数</h3><figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">q, r = <span class="built_in">divmod</span>(<span class="number">10</span>, <span class="number">3</span>)</span><br><span class="line"><span class="built_in">print</span>(q, r)              <span class="comment"># 3 1</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="4-5-赋值、比较与逻辑运算符"><a href="#4-5-赋值、比较与逻辑运算符" class="headerlink" title="4.5 赋值、比较与逻辑运算符"></a>4.5 赋值、比较与逻辑运算符</h3><ul>
+<li>赋值：<code>= += -= *= /= %= //= **=</code>。</li>
+<li>比较：<code>== != &gt; &gt;= &lt; &lt;=</code>，返回布尔。</li>
+<li>逻辑：<code>and</code>（与）、<code>or</code>（或）、<code>not</code>（非），对应 C++&#x2F;Java 的 <code>&amp;&amp;</code>、<code>||</code>、<code>!</code>，是单词不是符号。</li>
+</ul>
+<p>判断”在 10-20 之间”：<code>10 &lt;= num &lt;= 20</code> 或 <code>num &gt;= 10 and num &lt;= 20</code>。</p>
+<h2 id="五、易踩坑与补充知识点"><a href="#五、易踩坑与补充知识点" class="headerlink" title="五、易踩坑与补充知识点"></a>五、易踩坑与补充知识点</h2><h3 id="5-1-round-是银行家舍入，不是四舍五入"><a href="#5-1-round-是银行家舍入，不是四舍五入" class="headerlink" title="5.1 round() 是银行家舍入，不是四舍五入"></a>5.1 round() 是银行家舍入，不是四舍五入</h3><p><code>round(x)</code> 取整、<code>round(x, n)</code> 保留 n 位小数，但规则是<strong>四舍六入五成双</strong>：小数部分正好 .5 时看前一位，偶数舍、奇数进（向偶数靠拢）。</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">print</span>(<span class="built_in">round</span>(<span class="number">2.5</span>))   <span class="comment"># 2  ← 5 前是 2（偶数），舍掉，不是数学上的 3</span></span><br><span class="line"><span class="built_in">print</span>(<span class="built_in">round</span>(<span class="number">3.5</span>))   <span class="comment"># 4  ← 5 前是 3（奇数），进位</span></span><br><span class="line"><span class="built_in">print</span>(<span class="built_in">round</span>(<span class="number">4.5</span>))   <span class="comment"># 4  ← 4 是偶数，舍掉</span></span><br><span class="line"><span class="built_in">print</span>(<span class="built_in">round</span>(<span class="number">2.675</span>, <span class="number">2</span>))  <span class="comment"># 2.67  ← 2.675 在二进制里实际是 2.67499...，浮点误差导致</span></span><br></pre></td></tr></table></figure>
+
+<p><code>f&quot;{2.5:.0f}&quot;</code> 输出也是 <code>2</code>，和 <code>round()</code> 同一套五成双规则，<strong>不是真四舍五入</strong>。需要四舍五入时：正数用 <code>int(x + 0.5)</code>，精确场景用 <code>Decimal</code> 的 <code>ROUND_HALF_UP</code>。</p>
+<h3 id="5-2-Decimal：精确十进制，金额计算用它"><a href="#5-2-Decimal：精确十进制，金额计算用它" class="headerlink" title="5.2 Decimal：精确十进制，金额计算用它"></a>5.2 Decimal：精确十进制，金额计算用它</h3><p><code>decimal</code> 模块提供的精确十进制数，解决 float 二进制误差。<strong>构造时传字符串</strong>，不要传 float（会把误差一起带进来）。</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">from</span> decimal <span class="keyword">import</span> Decimal</span><br><span class="line"></span><br><span class="line"><span class="built_in">print</span>(Decimal(<span class="string">&quot;0.1&quot;</span>) + Decimal(<span class="string">&quot;0.2&quot;</span>))   <span class="comment"># 0.3 精确</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">from</span> decimal <span class="keyword">import</span> Decimal, ROUND_HALF_UP</span><br><span class="line"><span class="built_in">print</span>(Decimal(<span class="string">&quot;2.5&quot;</span>).quantize(Decimal(<span class="string">&quot;1&quot;</span>), rounding=ROUND_HALF_UP))        <span class="comment"># 3，真四舍五入</span></span><br><span class="line"><span class="built_in">print</span>(Decimal(<span class="string">&quot;2.675&quot;</span>).quantize(Decimal(<span class="string">&quot;0.01&quot;</span>), rounding=ROUND_HALF_UP))  <span class="comment"># 2.68</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="5-3-海象运算符-（Python-3-8-）"><a href="#5-3-海象运算符-（Python-3-8-）" class="headerlink" title="5.3 海象运算符 :&#x3D;（Python 3.8+）"></a>5.3 海象运算符 :&#x3D;（Python 3.8+）</h3><p>赋值并立即在表达式中使用，省一行：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">if</span> (n := <span class="built_in">len</span>(<span class="string">&quot;hello&quot;</span>)) &gt; <span class="number">3</span>:</span><br><span class="line">    <span class="built_in">print</span>(<span class="string">f&quot;长度是 <span class="subst">&#123;n&#125;</span>&quot;</span>)    <span class="comment"># 长度是 5</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="5-4-多变量赋值与解包"><a href="#5-4-多变量赋值与解包" class="headerlink" title="5.4 多变量赋值与解包"></a>5.4 多变量赋值与解包</h3><p>一条语句给多个变量赋值，交换变量一行搞定，也能把列表元素解包给多个变量：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">a, b, c = <span class="number">100</span>, <span class="number">200</span>, <span class="number">300</span></span><br><span class="line">a, b, c = c, a, b          <span class="comment"># 右侧整体打包后依次赋值，实现轮换</span></span><br><span class="line"><span class="built_in">print</span>(a, b, c)             <span class="comment"># 300 100 200</span></span><br><span class="line"></span><br><span class="line">a = [<span class="number">5</span>, <span class="number">8</span>, <span class="number">7</span>]</span><br><span class="line">z, x, c = a                <span class="comment"># 解包：z=5, x=8, c=7</span></span><br><span class="line"><span class="built_in">print</span>(z, x, c)             <span class="comment"># 5 8 7</span></span><br></pre></td></tr></table></figure>
+
+<h2 id="今日总结"><a href="#今日总结" class="headerlink" title="今日总结"></a>今日总结</h2><table>
+<thead>
+<tr>
+<th>模块</th>
+<th>核心要点</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>变量与类型</td>
+<td>动态类型不声明；五大类型 int&#x2F;float&#x2F;str&#x2F;bool&#x2F;NoneType；判断类型用 <code>isinstance</code>（认子类、可多类型），None 用 <code>is None</code></td>
+</tr>
+<tr>
+<td>字符串</td>
+<td>三引号可多行；格式化首选 f-string；格式顺序&#x3D;对齐+宽度+千分位+精度+类型；<code>f</code>可设精度、<code>d</code>不能、<code>%</code>自动×100</td>
+</tr>
+<tr>
+<td>输入输出</td>
+<td><code>input()</code> 永远是字符串，要转换；<code>print</code> 用 <code>sep</code>&#x2F;<code>end</code> 控制分隔和结尾；<code>split()</code> 一行取多值</td>
+</tr>
+<tr>
+<td>运算符</td>
+<td><code>/</code> 永远浮点、<code>//</code> 整除、<code>%</code> 取余、<code>**</code> 幂；浮点有精度误差；支持链式比较 <code>1&lt;2&lt;3</code>；<code>divmod()</code> 一次拿商余</td>
+</tr>
+<tr>
+<td>易踩坑</td>
+<td><code>round()</code> 五成双不是四舍五入；精确金额用 <code>Decimal</code>（构造传字符串）；无 <code>++</code>&#x2F;<code>--</code> 用 <code>+=</code></td>
+</tr>
+</tbody></table>
+
+      </div>
+
+    
+    
+    
+
+      <footer class="post-footer">
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/2026/09/25/%E5%A4%8D%E7%9B%98%E4%B8%8E%E7%AC%94%E8%AE%B0/%E5%A4%8D%E7%9B%98/day44/" rel="prev" title="">
+      <i class="fa fa-chevron-left"></i> 
+    </a></div>
+      <div class="post-nav-item">
+    <a href="/2026/10/04/python/02%20%E6%B5%81%E7%A8%8B%E6%8E%A7%E5%88%B6%EF%BC%9A%E6%9D%A1%E4%BB%B6%E5%88%A4%E6%96%AD%E3%80%81%E6%A8%A1%E5%BC%8F%E5%8C%B9%E9%85%8D%E4%B8%8E%E5%BE%AA%E7%8E%AF/" rel="next" title="02 流程控制：条件判断、模式匹配与循环">
+      02 流程控制：条件判断、模式匹配与循环 <i class="fa fa-chevron-right"></i>
+    </a></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+
+
+          </div>
+          
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#01-Python%E5%9F%BA%E7%A1%80%EF%BC%9A%E5%8F%98%E9%87%8F%E7%B1%BB%E5%9E%8B%E3%80%81%E5%AD%97%E7%AC%A6%E4%B8%B2%E6%A0%BC%E5%BC%8F%E5%8C%96%E3%80%81%E8%BE%93%E5%85%A5%E8%BE%93%E5%87%BA%E4%B8%8E%E8%BF%90%E7%AE%97%E7%AC%A6"><span class="nav-number">1.</span> <span class="nav-text">01 Python基础：变量类型、字符串格式化、输入输出与运算符</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%80%E3%80%81%E5%8F%98%E9%87%8F%E4%B8%8E%E5%8A%A8%E6%80%81%E7%B1%BB%E5%9E%8B"><span class="nav-number">1.1.</span> <span class="nav-text">一、变量与动态类型</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#1-1-%E5%8F%98%E9%87%8F%E4%B8%8E%E5%AD%97%E9%9D%A2%E9%87%8F"><span class="nav-number">1.1.1.</span> <span class="nav-text">1.1 变量与字面量</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#1-2-%E4%BA%94%E5%A4%A7%E5%9F%BA%E7%A1%80%E6%95%B0%E6%8D%AE%E7%B1%BB%E5%9E%8B"><span class="nav-number">1.1.2.</span> <span class="nav-text">1.2 五大基础数据类型</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#1-3-%E7%B1%BB%E5%9E%8B%E5%88%A4%E6%96%AD%EF%BC%9Atype-%E4%B8%8E-isinstance"><span class="nav-number">1.1.3.</span> <span class="nav-text">1.3 类型判断：type() 与 isinstance()</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BA%8C%E3%80%81%E5%AD%97%E7%AC%A6%E4%B8%B2%EF%BC%9A%E5%AE%9A%E4%B9%89%E3%80%81%E6%8B%BC%E6%8E%A5%E4%B8%8E%E6%A0%BC%E5%BC%8F%E5%8C%96"><span class="nav-number">1.2.</span> <span class="nav-text">二、字符串：定义、拼接与格式化</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#2-1-%E4%B8%89%E7%A7%8D%E5%AE%9A%E4%B9%89%E6%96%B9%E5%BC%8F"><span class="nav-number">1.2.1.</span> <span class="nav-text">2.1 三种定义方式</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2-2-%E6%8B%BC%E6%8E%A5%E4%B8%8E%E6%A0%BC%E5%BC%8F%E5%8C%96%E4%B8%89%E7%A7%8D%E6%96%B9%E5%BC%8F"><span class="nav-number">1.2.2.</span> <span class="nav-text">2.2 拼接与格式化三种方式</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2-3-f-string-%E8%BF%9B%E9%98%B6%E6%A0%BC%E5%BC%8F%EF%BC%88%E7%BB%84%E5%90%88%E9%A1%BA%E5%BA%8F%EF%BC%89"><span class="nav-number">1.2.3.</span> <span class="nav-text">2.3 f-string 进阶格式（组合顺序）</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%89%E3%80%81%E8%BE%93%E5%85%A5%E8%BE%93%E5%87%BA%E4%B8%8E%E7%B1%BB%E5%9E%8B%E8%BD%AC%E6%8D%A2"><span class="nav-number">1.3.</span> <span class="nav-text">三、输入输出与类型转换</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#3-1-input-%E6%B0%B8%E8%BF%9C%E8%BF%94%E5%9B%9E%E5%AD%97%E7%AC%A6%E4%B8%B2"><span class="nav-number">1.3.1.</span> <span class="nav-text">3.1 input() 永远返回字符串</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#3-2-%E7%B1%BB%E5%9E%8B%E8%BD%AC%E6%8D%A2"><span class="nav-number">1.3.2.</span> <span class="nav-text">3.2 类型转换</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#3-3-print-%E7%9A%84-sep-%E4%B8%8E-end"><span class="nav-number">1.3.3.</span> <span class="nav-text">3.3 print() 的 sep 与 end</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#3-4-%E4%B8%80%E8%A1%8C%E8%BE%93%E5%85%A5%E5%A4%9A%E4%B8%AA%E5%80%BC%EF%BC%9Asplit"><span class="nav-number">1.3.4.</span> <span class="nav-text">3.4 一行输入多个值：split()</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%9B%9B%E3%80%81%E8%BF%90%E7%AE%97%E7%AC%A6%E4%B8%8E%E8%A1%A8%E8%BE%BE%E5%BC%8F"><span class="nav-number">1.4.</span> <span class="nav-text">四、运算符与表达式</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#4-1-%E7%AE%97%E6%9C%AF%E8%BF%90%E7%AE%97%E7%AC%A6%E5%8F%8A%E7%BB%93%E6%9E%9C%E7%B1%BB%E5%9E%8B"><span class="nav-number">1.4.1.</span> <span class="nav-text">4.1 算术运算符及结果类型</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#4-2-%E6%B5%AE%E7%82%B9%E7%B2%BE%E5%BA%A6%E9%97%AE%E9%A2%98"><span class="nav-number">1.4.2.</span> <span class="nav-text">4.2 浮点精度问题</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#4-3-%E9%93%BE%E5%BC%8F%E6%AF%94%E8%BE%83"><span class="nav-number">1.4.3.</span> <span class="nav-text">4.3 链式比较</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#4-4-divmod-%E4%B8%80%E6%AC%A1%E6%8B%BF%E5%95%86%E5%92%8C%E4%BD%99%E6%95%B0"><span class="nav-number">1.4.4.</span> <span class="nav-text">4.4 divmod() 一次拿商和余数</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#4-5-%E8%B5%8B%E5%80%BC%E3%80%81%E6%AF%94%E8%BE%83%E4%B8%8E%E9%80%BB%E8%BE%91%E8%BF%90%E7%AE%97%E7%AC%A6"><span class="nav-number">1.4.5.</span> <span class="nav-text">4.5 赋值、比较与逻辑运算符</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BA%94%E3%80%81%E6%98%93%E8%B8%A9%E5%9D%91%E4%B8%8E%E8%A1%A5%E5%85%85%E7%9F%A5%E8%AF%86%E7%82%B9"><span class="nav-number">1.5.</span> <span class="nav-text">五、易踩坑与补充知识点</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#5-1-round-%E6%98%AF%E9%93%B6%E8%A1%8C%E5%AE%B6%E8%88%8D%E5%85%A5%EF%BC%8C%E4%B8%8D%E6%98%AF%E5%9B%9B%E8%88%8D%E4%BA%94%E5%85%A5"><span class="nav-number">1.5.1.</span> <span class="nav-text">5.1 round() 是银行家舍入，不是四舍五入</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#5-2-Decimal%EF%BC%9A%E7%B2%BE%E7%A1%AE%E5%8D%81%E8%BF%9B%E5%88%B6%EF%BC%8C%E9%87%91%E9%A2%9D%E8%AE%A1%E7%AE%97%E7%94%A8%E5%AE%83"><span class="nav-number">1.5.2.</span> <span class="nav-text">5.2 Decimal：精确十进制，金额计算用它</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#5-3-%E6%B5%B7%E8%B1%A1%E8%BF%90%E7%AE%97%E7%AC%A6-%EF%BC%88Python-3-8-%EF%BC%89"><span class="nav-number">1.5.3.</span> <span class="nav-text">5.3 海象运算符 :&#x3D;（Python 3.8+）</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#5-4-%E5%A4%9A%E5%8F%98%E9%87%8F%E8%B5%8B%E5%80%BC%E4%B8%8E%E8%A7%A3%E5%8C%85"><span class="nav-number">1.5.4.</span> <span class="nav-text">5.4 多变量赋值与解包</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BB%8A%E6%97%A5%E6%80%BB%E7%BB%93"><span class="nav-number">1.6.</span> <span class="nav-text">今日总结</span></a></li></ol></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="ZHX"
+      src="/images/avatar.jpeg">
+  <p class="site-author-name" itemprop="name">ZHX</p>
+  <div class="site-description" itemprop="description">记录编程学习、项目实战和踩坑笔记</div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">66</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+            <a href="/categories/">
+          
+        <span class="site-state-item-count">12</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+  </nav>
+</div>
+
+
+
+      </div>
+        <div class="back-to-top motion-element">
+          <i class="fa fa-arrow-up"></i>
+          <span>0%</span>
+        </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2026</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">ZHX</span>
+</div>
+  <div class="powered-by">由 <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Gemini</a> 强力驱动
+  </div>
+
+        
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/pisces.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+
+</body>
+</html>
