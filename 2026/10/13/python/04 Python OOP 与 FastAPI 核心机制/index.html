@@ -1,0 +1,762 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 8.1.2">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/favicon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon.png">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/all.min.css">
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"www.blog-x.cc.cd","root":"/","scheme":"Gemini","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"always","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":false,"show_result":false,"style":null},"back2top":{"enable":true,"sidebar":true,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":false,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}}};
+  </script>
+
+  <meta name="description" content="Python OOP 与 FastAPI 核心机制一、 Python 面向对象基础1.1 类的定义与 pass 占位在 Python 中，使用 class 关键字定义类。class 类名: 后面必须缩进并跟一个代码块。如果当前不需要写任何属性或方法，必须使用 pass 占位。 12class Person:    pass  # 仅占位，保证语法正确 注意：pass 没有任何实际功能，仅仅是为了防">
+<meta property="og:type" content="article">
+<meta property="og:title" content="04 Python OOP 与 FastAPI 核心机制学习笔记">
+<meta property="og:url" content="https://www.blog-x.cc.cd/2026/10/13/python/04%20Python%20OOP%20%E4%B8%8E%20FastAPI%20%E6%A0%B8%E5%BF%83%E6%9C%BA%E5%88%B6/index.html">
+<meta property="og:site_name" content="我的学习日记">
+<meta property="og:description" content="Python OOP 与 FastAPI 核心机制一、 Python 面向对象基础1.1 类的定义与 pass 占位在 Python 中，使用 class 关键字定义类。class 类名: 后面必须缩进并跟一个代码块。如果当前不需要写任何属性或方法，必须使用 pass 占位。 12class Person:    pass  # 仅占位，保证语法正确 注意：pass 没有任何实际功能，仅仅是为了防">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2026-10-13T04:00:00.000Z">
+<meta property="article:modified_time" content="2026-10-13T10:23:25.195Z">
+<meta property="article:author" content="ZHX">
+<meta name="twitter:card" content="summary">
+
+<link rel="canonical" href="https://www.blog-x.cc.cd/2026/10/13/python/04%20Python%20OOP%20%E4%B8%8E%20FastAPI%20%E6%A0%B8%E5%BF%83%E6%9C%BA%E5%88%B6/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'zh-CN'
+  };
+</script>
+
+  <title>04 Python OOP 与 FastAPI 核心机制学习笔记 | 我的学习日记</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">我的学习日记</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="main-menu menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档<span class="badge">68</span></a>
+
+  </li>
+        <li class="menu-item menu-item-categories">
+
+    <a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分类<span class="badge">13</span></a>
+
+  </li>
+        <li class="menu-item menu-item-about">
+
+    <a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>关于</a>
+
+  </li>
+        <li class="menu-item menu-item-tags">
+
+    <a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签<span class="badge">0</span></a>
+
+  </li>
+  </ul>
+</nav>
+
+
+
+
+</div>
+    </header>
+
+    
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://www.blog-x.cc.cd/2026/10/13/python/04%20Python%20OOP%20%E4%B8%8E%20FastAPI%20%E6%A0%B8%E5%BF%83%E6%9C%BA%E5%88%B6/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.jpeg">
+      <meta itemprop="name" content="ZHX">
+      <meta itemprop="description" content="记录编程学习、项目实战和踩坑笔记">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="我的学习日记">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          04 Python OOP 与 FastAPI 核心机制学习笔记
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+              
+
+              <time title="创建时间：2026-10-13 12:00:00 / 修改时间：18:23:25" itemprop="dateCreated datePublished" datetime="2026-10-13T12:00:00+08:00">2026-10-13</time>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+      <div class="post-body" itemprop="articleBody">
+
+        
+          <h1 id="Python-OOP-与-FastAPI-核心机制"><a href="#Python-OOP-与-FastAPI-核心机制" class="headerlink" title="Python OOP 与 FastAPI 核心机制"></a>Python OOP 与 FastAPI 核心机制</h1><h2 id="一、-Python-面向对象基础"><a href="#一、-Python-面向对象基础" class="headerlink" title="一、 Python 面向对象基础"></a>一、 Python 面向对象基础</h2><h3 id="1-1-类的定义与-pass-占位"><a href="#1-1-类的定义与-pass-占位" class="headerlink" title="1.1 类的定义与 pass 占位"></a>1.1 类的定义与 <code>pass</code> 占位</h3><p>在 Python 中，使用 <code>class</code> 关键字定义类。<br><code>class 类名:</code> 后面必须缩进并跟一个代码块。如果当前不需要写任何属性或方法，必须使用 <code>pass</code> 占位。</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">class</span> <span class="title class_">Person</span>:</span><br><span class="line">    <span class="keyword">pass</span>  <span class="comment"># 仅占位，保证语法正确</span></span><br></pre></td></tr></table></figure>
+<p><strong>注意</strong>：<code>pass</code> 没有任何实际功能，仅仅是为了防止 <code>IndentationError</code>（缩进错误）。如果不写 <code>pass</code> 且不写其他代码，程序会报错。</p>
+<h3 id="1-2-self-与实例变量初始化"><a href="#1-2-self-与实例变量初始化" class="headerlink" title="1.2 self 与实例变量初始化"></a>1.2 <code>self</code> 与实例变量初始化</h3><p>Python 中的 <code>self</code> 相当于 Java 中的 <code>this</code>，代表当前操作的对象实例。</p>
+<p><strong>与 Java 的核心区别：</strong></p>
+<ol>
+<li><strong>必须显式声明</strong>：<code>self</code> 必须是实例方法的第一个参数（如 <code>def __init__(self, name):</code>），调用时不需要手动传，Python 会自动把对象传入。</li>
+<li><strong>名字只是约定</strong>：<code>self</code> 不是关键字，写成 <code>this</code> 或 <code>abc</code> 语法上也合法，但强烈不建议。</li>
+<li><strong><code>__init__</code> 是初始化方法</strong>：创建对象后自动调用，主要用于设置实例的初始属性。</li>
+</ol>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">class</span> <span class="title class_">Person</span>:</span><br><span class="line">    <span class="keyword">def</span> <span class="title function_">__init__</span>(<span class="params">self, name, age</span>):</span><br><span class="line">        <span class="variable language_">self</span>.name = name  <span class="comment"># 实例变量</span></span><br><span class="line">        <span class="variable language_">self</span>.age = age</span><br><span class="line"></span><br><span class="line">p = Person(<span class="string">&quot;小明&quot;</span>, <span class="number">18</span>)</span><br><span class="line"><span class="built_in">print</span>(p.name)  <span class="comment"># 输出 小明</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="1-3-变量的作用域：局部变量、实例变量与类变量"><a href="#1-3-变量的作用域：局部变量、实例变量与类变量" class="headerlink" title="1.3 变量的作用域：局部变量、实例变量与类变量"></a>1.3 变量的作用域：局部变量、实例变量与类变量</h3><p>这是极易混淆的地方，通过位置和前缀来区分：</p>
+<table>
+<thead>
+<tr>
+<th align="left">变量类型</th>
+<th align="left">定义位置</th>
+<th align="left">前缀</th>
+<th align="left">归属</th>
+<th align="left">生命周期</th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="left"><strong>局部变量</strong></td>
+<td align="left">方法内部</td>
+<td align="left">无</td>
+<td align="left">当前方法</td>
+<td align="left">方法执行完即销毁</td>
+</tr>
+<tr>
+<td align="left"><strong>实例变量</strong></td>
+<td align="left">方法内部（通常在 <code>__init__</code>）</td>
+<td align="left"><code>self.</code></td>
+<td align="left">当前实例对象</td>
+<td align="left">随对象存在</td>
+</tr>
+<tr>
+<td align="left"><strong>类变量</strong></td>
+<td align="left">类内部，方法外部</td>
+<td align="left">无</td>
+<td align="left">整个类（所有实例共享）</td>
+<td align="left">随类存在</td>
+</tr>
+</tbody></table>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">class</span> <span class="title class_">Person</span>:</span><br><span class="line">    species = <span class="string">&quot;人类&quot;</span>  <span class="comment"># 类变量（相当于 Java 的 static 变量）</span></span><br><span class="line"></span><br><span class="line">    <span class="keyword">def</span> <span class="title function_">__init__</span>(<span class="params">self, name</span>):</span><br><span class="line">        <span class="variable language_">self</span>.name = name  <span class="comment"># 实例变量</span></span><br><span class="line">        temp = <span class="string">&quot;临时&quot;</span>     <span class="comment"># 局部变量，方法结束就没了</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="1-4-动态添加属性与-slots"><a href="#1-4-动态添加属性与-slots" class="headerlink" title="1.4 动态添加属性与 __slots__"></a>1.4 动态添加属性与 <code>__slots__</code></h3><p>Python 是动态语言，允许在类外部或方法外动态给对象添加属性，即使类里没有定义。</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">class</span> <span class="title class_">Dog</span>:</span><br><span class="line">    <span class="keyword">pass</span></span><br><span class="line"></span><br><span class="line">d = Dog()</span><br><span class="line">d.name = <span class="string">&quot;旺财&quot;</span>  <span class="comment"># 动态添加属性</span></span><br><span class="line">d.age = <span class="number">3</span></span><br></pre></td></tr></table></figure>
+<p><strong>注意</strong>：这是 Python 的灵活性所在，但也容易导致代码混乱。同一个类的不同对象可能拥有不同的属性。如果不希望外部随意添加，可以使用 <code>__slots__</code> 限制。</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">class</span> <span class="title class_">Dog</span>:</span><br><span class="line">    __slots__ = (<span class="string">&#x27;name&#x27;</span>, <span class="string">&#x27;age&#x27;</span>)  <span class="comment"># 只允许这两个属性</span></span><br><span class="line"></span><br><span class="line">d = Dog()</span><br><span class="line">d.name = <span class="string">&quot;旺财&quot;</span>  <span class="comment"># 允许</span></span><br><span class="line">d.color = <span class="string">&quot;白&quot;</span>  <span class="comment"># 报错：AttributeError</span></span><br></pre></td></tr></table></figure>
+
+<hr>
+<h2 id="二、-Python-三大特性与抽象类"><a href="#二、-Python-三大特性与抽象类" class="headerlink" title="二、 Python 三大特性与抽象类"></a>二、 Python 三大特性与抽象类</h2><h3 id="2-1-封装（Encapsulation）"><a href="#2-1-封装（Encapsulation）" class="headerlink" title="2.1 封装（Encapsulation）"></a>2.1 封装（Encapsulation）</h3><p>Python 没有像 Java 那样的 <code>private</code> 关键字，权限控制靠<strong>命名约定</strong>：</p>
+<ul>
+<li><code>name</code>：公有，谁都能访问。</li>
+<li><code>_name</code>：受保护（约定俗成，外部最好别直接访问）。</li>
+<li><code>__name</code>：私有。Python 底层会将其名字改写为 <code>_类名__name</code>，起到隐藏效果。</li>
+</ul>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">class</span> <span class="title class_">Person</span>:</span><br><span class="line">    <span class="keyword">def</span> <span class="title function_">__init__</span>(<span class="params">self, name, age, salary</span>):</span><br><span class="line">        <span class="variable language_">self</span>.name = name        <span class="comment"># 公有</span></span><br><span class="line">        <span class="variable language_">self</span>._age = age         <span class="comment"># 受保护</span></span><br><span class="line">        <span class="variable language_">self</span>.__salary = salary  <span class="comment"># 私有</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="2-2-继承（Inheritance）"><a href="#2-2-继承（Inheritance）" class="headerlink" title="2.2 继承（Inheritance）"></a>2.2 继承（Inheritance）</h3><ul>
+<li><strong>语法</strong>：<code>class 子类(父类):</code></li>
+<li><strong>调用父类方法</strong>：使用 <code>super().__init__(...)</code>。</li>
+<li><strong>多继承</strong>：Python 支持多继承（如 <code>class Duck(Flyable, Swimmable):</code>）。如果多个父类有同名方法，Python 使用 MRO（方法解析顺序）算法决定调用哪个。</li>
+</ul>
+<h3 id="2-3-多态（Polymorphism）与鸭子类型"><a href="#2-3-多态（Polymorphism）与鸭子类型" class="headerlink" title="2.3 多态（Polymorphism）与鸭子类型"></a>2.3 多态（Polymorphism）与鸭子类型</h3><p>Python 的多态基于“鸭子类型”：<strong>不要求对象有继承关系，只要它有对应的方法，就能被调用。</strong></p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">class</span> <span class="title class_">Dog</span>:</span><br><span class="line">    <span class="keyword">def</span> <span class="title function_">speak</span>(<span class="params">self</span>): <span class="built_in">print</span>(<span class="string">&quot;汪汪&quot;</span>)</span><br><span class="line"></span><br><span class="line"><span class="keyword">class</span> <span class="title class_">Robot</span>:</span><br><span class="line">    <span class="keyword">def</span> <span class="title function_">speak</span>(<span class="params">self</span>): <span class="built_in">print</span>(<span class="string">&quot;滴滴&quot;</span>)</span><br><span class="line"></span><br><span class="line"><span class="keyword">def</span> <span class="title function_">make_speak</span>(<span class="params">obj</span>):  <span class="comment"># 不需要类型约束</span></span><br><span class="line">    obj.speak()</span><br><span class="line"></span><br><span class="line">make_speak(Dog())   <span class="comment"># 汪汪</span></span><br><span class="line">make_speak(Robot()) <span class="comment"># 滴滴</span></span><br></pre></td></tr></table></figure>
+
+<p><strong>类型注解与多态</strong>：即使使用类型注解（如 <code>def func(animal: Animal)</code>），运行时也会忽略，传入无关对象（如 <code>Robot</code>）依然能运行。类型注解只是给 IDE 和静态检查工具（如 mypy）看的提示，<strong>不是强制的</strong>。</p>
+<h3 id="2-4-抽象类与抽象方法"><a href="#2-4-抽象类与抽象方法" class="headerlink" title="2.4 抽象类与抽象方法"></a>2.4 抽象类与抽象方法</h3><p>Python 通过 <code>abc</code> 模块实现抽象类。</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">from</span> abc <span class="keyword">import</span> ABC, abstractmethod</span><br><span class="line"></span><br><span class="line"><span class="keyword">class</span> <span class="title class_">Animal</span>(<span class="title class_ inherited__">ABC</span>):  <span class="comment"># 继承 ABC，激活抽象机制</span></span><br><span class="line"><span class="meta">    @abstractmethod</span></span><br><span class="line">    <span class="keyword">def</span> <span class="title function_">speak</span>(<span class="params">self</span>):  <span class="comment"># 打上抽象标签</span></span><br><span class="line">        <span class="keyword">pass</span></span><br></pre></td></tr></table></figure>
+<ul>
+<li><strong>生效条件</strong>：必须同时满足“继承 <code>ABC</code>”和“包含 <code>@abstractmethod</code>”。缺一不可。</li>
+<li><strong>实例化限制</strong>：子类如果没有完全实现抽象方法，代码不报错，但执行到 <code>子类()</code> 时，会抛出 <code>TypeError</code>。</li>
+<li><strong>与 Java 的区别</strong>：Java 在编译期强制要求子类实现或声明为 <code>abstract</code>；Python 在运行实例化时动态拦截。</li>
+</ul>
+<hr>
+<h2 id="三、-Python-异常处理基础"><a href="#三、-Python-异常处理基础" class="headerlink" title="三、 Python 异常处理基础"></a>三、 Python 异常处理基础</h2><h3 id="3-1-主动抛出异常（raise）"><a href="#3-1-主动抛出异常（raise）" class="headerlink" title="3.1 主动抛出异常（raise）"></a>3.1 主动抛出异常（<code>raise</code>）</h3><p>Python 使用 <code>raise</code> 关键字主动抛出异常（对应 Java 的 <code>throw</code>）。</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">raise</span> ValueError(<span class="string">&quot;年龄不能为负数&quot;</span>)</span><br></pre></td></tr></table></figure>
+
+<h3 id="3-2-自定义异常"><a href="#3-2-自定义异常" class="headerlink" title="3.2 自定义异常"></a>3.2 自定义异常</h3><figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">class</span> <span class="title class_">BusinessException</span>(<span class="title class_ inherited__">Exception</span>):</span><br><span class="line">    <span class="keyword">def</span> <span class="title function_">__init__</span>(<span class="params">self, code: <span class="built_in">int</span>, message: <span class="built_in">str</span></span>):</span><br><span class="line">        <span class="variable language_">self</span>.code = code</span><br><span class="line">        <span class="variable language_">self</span>.message = message</span><br><span class="line">        <span class="built_in">super</span>().__init__(message)</span><br></pre></td></tr></table></figure>
+
+<h3 id="3-3-异常链（raise-from-）"><a href="#3-3-异常链（raise-from-）" class="headerlink" title="3.3 异常链（raise ... from ...）"></a>3.3 异常链（<code>raise ... from ...</code>）</h3><p><code>from</code> 的核心作用是<strong>建立异常链，保留原始异常（根因）</strong>。</p>
+<p>如果不加 <code>from e</code>，原始异常信息可能会被掩盖；加上后，Python 会把两个异常串联打印，明确告诉开发者：“因为发生了 <code>DatabaseError</code>，所以导致了 <code>BusinessException</code>”。</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">try</span>:</span><br><span class="line">    user = db.query(user_id)</span><br><span class="line"><span class="keyword">except</span> DatabaseError <span class="keyword">as</span> e:</span><br><span class="line">    <span class="comment"># 👇 显式建立异常链</span></span><br><span class="line">    <span class="keyword">raise</span> BusinessException(<span class="number">500</span>, <span class="string">&quot;查询失败&quot;</span>) <span class="keyword">from</span> e</span><br></pre></td></tr></table></figure>
+
+<p><strong>与 Java 的对比：</strong></p>
+<ul>
+<li><strong>Java</strong>：通过构造函数传递原始异常，如 <code>throw new BusinessException(500, &quot;查询失败&quot;, e);</code></li>
+<li><strong>Python</strong>：通过 <code>raise ... from e</code> 语法显式声明因果。</li>
+</ul>
+<p><strong>进阶用法：<code>from None</code></strong><br>如果不想在日志或前端暴露底层原始异常（如数据库表名），可以使用 <code>raise BusinessException(...) from None</code>，彻底隐藏原始异常。</p>
+<h3 id="3-4-资源清理与-finally"><a href="#3-4-资源清理与-finally" class="headerlink" title="3.4 资源清理与 finally"></a>3.4 资源清理与 <code>finally</code></h3><p><code>finally</code> 块的作用是：<strong>无论 <code>try</code> 块里是否发生异常，<code>finally</code> 块里的代码一定会执行。</strong> 它最经典的用途是释放资源（如关闭文件、关闭数据库连接）。</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">f = <span class="built_in">open</span>(<span class="string">&quot;test.txt&quot;</span>, <span class="string">&quot;r&quot;</span>)</span><br><span class="line"><span class="keyword">try</span>:</span><br><span class="line">    content = f.read()</span><br><span class="line"><span class="keyword">except</span> FileNotFoundError <span class="keyword">as</span> e:</span><br><span class="line">    <span class="built_in">print</span>(<span class="string">&quot;文件不存在&quot;</span>)</span><br><span class="line"><span class="keyword">finally</span>:</span><br><span class="line">    f.close()  <span class="comment"># 👈 不管有没有报错，文件都要关！</span></span><br></pre></td></tr></table></figure>
+
+<p><strong>在 FastAPI 中的最佳实践</strong>：<br>在 FastAPI 项目中，<strong>不建议在业务代码里手动写 <code>finally</code> 关闭数据库连接</strong>。因为 FastAPI 通常使用依赖注入（<code>Depends</code>）来管理数据库会话的生命周期，框架会在请求结束后自动处理 <code>close</code>。如果在业务逻辑里强行 <code>finally: db.close()</code>，可能会导致框架后续操作（如 commit&#x2F;rollback）报错（连接已关闭）。只有在手动开启了底层资源（如原生文件流）时，才需要配合 <code>finally</code> 使用。</p>
+<hr>
+<h2 id="四、-FastAPI-基础：参数接收"><a href="#四、-FastAPI-基础：参数接收" class="headerlink" title="四、 FastAPI 基础：参数接收"></a>四、 FastAPI 基础：参数接收</h2><h3 id="4-1-路由映射"><a href="#4-1-路由映射" class="headerlink" title="4.1 路由映射"></a>4.1 路由映射</h3><p>FastAPI 使用装饰器绑定 URL 和函数。</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@app.get(<span class="params"><span class="string">&quot;/follow&quot;</span></span>)  </span><span class="comment"># 相当于 Java 的 @GetMapping(&quot;/follow&quot;)</span></span><br><span class="line"><span class="keyword">def</span> <span class="title function_">read_follow</span>():</span><br><span class="line">    <span class="keyword">return</span> &#123;<span class="string">&quot;message&quot;</span>: <span class="string">&quot;关注成功&quot;</span>&#125;</span><br></pre></td></tr></table></figure>
+
+<h3 id="4-2-三种参数的自动推断"><a href="#4-2-三种参数的自动推断" class="headerlink" title="4.2 三种参数的自动推断"></a>4.2 三种参数的自动推断</h3><p>FastAPI 根据参数名、类型注解和默认值自动识别参数来源，不需要像 Java 那样写 <code>@RequestParam</code>。</p>
+<table>
+<thead>
+<tr>
+<th align="left">参数类型</th>
+<th align="left">识别规则</th>
+<th align="left">示例</th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="left"><strong>路径参数</strong></td>
+<td align="left">名字和路径 <code>{}</code> 里一致</td>
+<td align="left"><code>def get_user(id: int)</code></td>
+</tr>
+<tr>
+<td align="left"><strong>查询参数</strong></td>
+<td align="left">不在路径里，且类型不是 Pydantic 模型</td>
+<td align="left"><code>def search(keyword: str, page: int = 1)</code></td>
+</tr>
+<tr>
+<td align="left"><strong>请求体</strong></td>
+<td align="left">参数类型继承自 <code>BaseModel</code></td>
+<td align="left"><code>def create(user: UserDTO)</code></td>
+</tr>
+</tbody></table>
+<h3 id="4-3-Pydantic-模型（BaseModel）"><a href="#4-3-Pydantic-模型（BaseModel）" class="headerlink" title="4.3 Pydantic 模型（BaseModel）"></a>4.3 Pydantic 模型（<code>BaseModel</code>）</h3><p>继承自 <code>pydantic.BaseModel</code> 的类就是 Pydantic 模型，FastAPI 会自动从请求体（JSON）解析数据并进行校验。</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">from</span> pydantic <span class="keyword">import</span> BaseModel</span><br><span class="line"></span><br><span class="line"><span class="keyword">class</span> <span class="title class_">ChatRequest</span>(<span class="title class_ inherited__">BaseModel</span>):</span><br><span class="line">    session_id: <span class="built_in">str</span>                <span class="comment"># 必填</span></span><br><span class="line">    user_message: <span class="built_in">str</span>              <span class="comment"># 必填</span></span><br><span class="line">    nick_name: <span class="built_in">str</span> = <span class="string">&quot;小美&quot;</span>        <span class="comment"># 选填，有默认值</span></span><br><span class="line">    nature: <span class="built_in">str</span> = <span class="string">&quot;温柔可爱的台湾腔姑娘&quot;</span>  <span class="comment"># 选填</span></span><br></pre></td></tr></table></figure>
+
+<p><strong>核心特性：</strong></p>
+<ul>
+<li><strong>默认值即选填</strong>：没有默认值的字段必填，传错类型或缺失会返回 422 错误。</li>
+<li><strong>自动类型转换</strong>：传 <code>&quot;18&quot;</code> 会自动转成整数 <code>18</code>。</li>
+<li><strong>与普通类的区别</strong>：不需要手写 <code>__init__</code>，Pydantic 自动生成，并带有强校验逻辑。</li>
+</ul>
+<hr>
+<h2 id="五、-FastAPI-基础：返回值与响应"><a href="#五、-FastAPI-基础：返回值与响应" class="headerlink" title="五、 FastAPI 基础：返回值与响应"></a>五、 FastAPI 基础：返回值与响应</h2><h3 id="5-1-自动转-JSON"><a href="#5-1-自动转-JSON" class="headerlink" title="5.1 自动转 JSON"></a>5.1 自动转 JSON</h3><p>FastAPI 默认就是 <code>@RestController</code> 风格。你只管 <code>return</code> Python 对象（字典、Pydantic 模型、列表），框架会自动序列化成 JSON，并设置正确的 <code>Content-Type</code>。</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@app.get(<span class="params"><span class="string">&quot;/user&quot;</span></span>)</span></span><br><span class="line"><span class="keyword">def</span> <span class="title function_">get_user</span>():</span><br><span class="line">    <span class="keyword">return</span> &#123;<span class="string">&quot;name&quot;</span>: <span class="string">&quot;小明&quot;</span>, <span class="string">&quot;age&quot;</span>: <span class="number">18</span>&#125;  <span class="comment"># 自动转 JSON</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="5-2-使用-response-model-过滤字段"><a href="#5-2-使用-response-model-过滤字段" class="headerlink" title="5.2 使用 response_model 过滤字段"></a>5.2 使用 <code>response_model</code> 过滤字段</h3><p>如果返回的是数据库对象（包含密码等敏感信息），可以使用 <code>response_model</code> 过滤并校验。</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">class</span> <span class="title class_">UserDTO</span>(<span class="title class_ inherited__">BaseModel</span>):</span><br><span class="line">    name: <span class="built_in">str</span></span><br><span class="line">    age: <span class="built_in">int</span></span><br><span class="line"></span><br><span class="line"><span class="meta">@app.get(<span class="params"><span class="string">&quot;/user&quot;</span>, response_model=UserDTO</span>)</span></span><br><span class="line"><span class="keyword">def</span> <span class="title function_">get_user</span>():</span><br><span class="line">    <span class="keyword">return</span> &#123;<span class="string">&quot;name&quot;</span>: <span class="string">&quot;小明&quot;</span>, <span class="string">&quot;age&quot;</span>: <span class="number">18</span>, <span class="string">&quot;password&quot;</span>: <span class="string">&quot;123456&quot;</span>&#125;  <span class="comment"># 密码会被自动过滤</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="5-3-自定义响应（JSONResponse）"><a href="#5-3-自定义响应（JSONResponse）" class="headerlink" title="5.3 自定义响应（JSONResponse）"></a>5.3 自定义响应（<code>JSONResponse</code>）</h3><p>如果需要自定义 HTTP 状态码和响应头，需要使用 <code>JSONResponse</code>。</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">from</span> fastapi.responses <span class="keyword">import</span> JSONResponse</span><br><span class="line"></span><br><span class="line"><span class="keyword">return</span> JSONResponse(</span><br><span class="line">    status_code=<span class="number">404</span>,</span><br><span class="line">    content=&#123;<span class="string">&quot;code&quot;</span>: <span class="number">404</span>, <span class="string">&quot;message&quot;</span>: <span class="string">&quot;不存在&quot;</span>, <span class="string">&quot;data&quot;</span>: <span class="literal">None</span>&#125;,</span><br><span class="line">    headers=&#123;<span class="string">&quot;X-Custom&quot;</span>: <span class="string">&quot;value&quot;</span>&#125;</span><br><span class="line">)</span><br></pre></td></tr></table></figure>
+
+<p><strong>与 Java 统一返回格式的对比</strong>：Java 习惯返回 <code>Result&lt;T&gt;</code> 对象（HTTP 永远 200，业务状态码在 JSON 里）。FastAPI 推荐直接用 HTTP 状态码表示结果。如果需要模拟 Java 风格，可以自定义 <code>Result</code> 模型或修改全局异常处理器。</p>
+<hr>
+<h2 id="六、-FastAPI-异常处理与全局配置"><a href="#六、-FastAPI-异常处理与全局配置" class="headerlink" title="六、 FastAPI 异常处理与全局配置"></a>六、 FastAPI 异常处理与全局配置</h2><h3 id="6-1-抛出-HTTPException"><a href="#6-1-抛出-HTTPException" class="headerlink" title="6.1 抛出 HTTPException"></a>6.1 抛出 HTTPException</h3><p>在 Web 层，使用 <code>HTTPException</code> 主动抛出 HTTP 错误。</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">from</span> fastapi <span class="keyword">import</span> HTTPException, status</span><br><span class="line"></span><br><span class="line"><span class="keyword">raise</span> HTTPException(</span><br><span class="line">    status_code=status.HTTP_404_NOT_FOUND,</span><br><span class="line">    detail=<span class="string">&quot;用户不存在&quot;</span>,</span><br><span class="line">    headers=&#123;<span class="string">&quot;WWW-Authenticate&quot;</span>: <span class="string">&quot;Bearer&quot;</span>&#125;</span><br><span class="line">)</span><br></pre></td></tr></table></figure>
+<ul>
+<li><code>status_code</code>：HTTP 状态码（必填）。</li>
+<li><code>detail</code>：错误详情，默认会被包装成 <code>{&quot;detail&quot;: &quot;...&quot;}</code> 返回给前端。</li>
+<li><code>headers</code>：自定义响应头（选填）。</li>
+</ul>
+<h3 id="6-2-全局兜底异常处理器"><a href="#6-2-全局兜底异常处理器" class="headerlink" title="6.2 全局兜底异常处理器"></a>6.2 全局兜底异常处理器</h3><p>使用 <code>@app.exception_handler(Exception)</code> 捕获未预料的异常（如空指针、数据库断开），记录日志并返回统一的 500 错误。</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@app.exception_handler(<span class="params">Exception</span>)</span></span><br><span class="line"><span class="keyword">async</span> <span class="keyword">def</span> <span class="title function_">exception_handler</span>(<span class="params">request, exc</span>):</span><br><span class="line">    logger.error(<span class="string">f&quot;发生异常: <span class="subst">&#123;exc&#125;</span>&quot;</span>)</span><br><span class="line">    <span class="keyword">return</span> JSONResponse(status_code=<span class="number">500</span>, content=&#123;<span class="string">&quot;code&quot;</span>: <span class="number">500</span>, <span class="string">&quot;message&quot;</span>: <span class="string">&quot;服务器内部错误&quot;</span>&#125;)</span><br></pre></td></tr></table></figure>
+
+<h3 id="6-3-覆盖-HTTPException-处理器（关键踩坑）"><a href="#6-3-覆盖-HTTPException-处理器（关键踩坑）" class="headerlink" title="6.3 覆盖 HTTPException 处理器（关键踩坑）"></a>6.3 覆盖 HTTPException 处理器（关键踩坑）</h3><p><strong><code>HTTPException</code> 默认不会被 <code>@app.exception_handler(Exception)</code> 捕获</strong>，它走的是 FastAPI 内置的处理器。</p>
+<p>如果要自定义 <code>HTTPException</code> 的返回格式（如改成 <code>{&quot;code&quot;: ..., &quot;message&quot;: ...}</code>），必须显式覆盖：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@app.exception_handler(<span class="params">HTTPException</span>)</span></span><br><span class="line"><span class="keyword">async</span> <span class="keyword">def</span> <span class="title function_">http_exception_handler</span>(<span class="params">request, exc: HTTPException</span>):</span><br><span class="line">    <span class="keyword">return</span> JSONResponse(</span><br><span class="line">        status_code=exc.status_code,</span><br><span class="line">        content=&#123;<span class="string">&quot;code&quot;</span>: exc.status_code, <span class="string">&quot;message&quot;</span>: exc.detail, <span class="string">&quot;data&quot;</span>: <span class="literal">None</span>&#125;</span><br><span class="line">    )</span><br></pre></td></tr></table></figure>
+
+<p><strong>异常处理器优先级</strong>：</p>
+<ol>
+<li>特定的自定义异常处理器（如 <code>BusinessException</code>）</li>
+<li>内置处理器（<code>HTTPException</code>、<code>RequestValidationError</code>）</li>
+<li>兜底处理器（<code>Exception</code>）</li>
+</ol>
+<hr>
+<h2 id="七、-Python-异步编程与-FastAPI-并发模型"><a href="#七、-Python-异步编程与-FastAPI-并发模型" class="headerlink" title="七、 Python 异步编程与 FastAPI 并发模型"></a>七、 Python 异步编程与 FastAPI 并发模型</h2><h3 id="7-1-异步编程的本质（与-Java-多线程的区别）"><a href="#7-1-异步编程的本质（与-Java-多线程的区别）" class="headerlink" title="7.1 异步编程的本质（与 Java 多线程的区别）"></a>7.1 异步编程的本质（与 Java 多线程的区别）</h3><p>在 Java 中，异步通常依赖<strong>多线程</strong>（如 <code>CompletableFuture</code>、<code>Thread</code>），由操作系统调度，主线程不阻塞，继续执行。这属于广义异步。</p>
+<p>Python 的 <code>async/await</code> 是基于**单线程 + 事件循环（Event Loop）**的协程模型。</p>
+<ul>
+<li>遇到 <code>await</code> 时，当前协程<strong>主动挂起</strong>，把 CPU 让给事件循环去执行其他任务。</li>
+<li>等 I&#x2F;O 完成后，事件循环再回来恢复执行。</li>
+<li>没有线程上下文切换开销，一个线程可支撑数万并发。</li>
+</ul>
+<p><strong>通俗比喻</strong>：</p>
+<ul>
+<li><strong>Java 多线程异步</strong>：餐厅雇了 10 个服务员（10 个线程），每人服务一桌，等菜时服务员就站着干等。</li>
+<li><strong>Python 协程异步</strong>：餐厅只有 1 个服务员（单线程），给 A 桌点完菜立刻去 B 桌，谁的菜好了就去端给谁，一个人跑全场。</li>
+</ul>
+<table>
+<thead>
+<tr>
+<th align="left">维度</th>
+<th align="left">Java 异步（多线程）</th>
+<th align="left">Python 异步（协程）</th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="left"><strong>底层机制</strong></td>
+<td align="left">多线程 &#x2F; 线程池</td>
+<td align="left">单线程 + 事件循环</td>
+</tr>
+<tr>
+<td align="left"><strong>调度者</strong></td>
+<td align="left">操作系统（抢占式调度）</td>
+<td align="left">Python 解释器（协作式调度）</td>
+</tr>
+<tr>
+<td align="left"><strong>切换开销</strong></td>
+<td align="left">大（线程上下文切换）</td>
+<td align="left">极小（函数挂起与恢复）</td>
+</tr>
+<tr>
+<td align="left"><strong>内存占用</strong></td>
+<td align="left">每个线程约 1MB</td>
+<td align="left">每个协程约几KB</td>
+</tr>
+<tr>
+<td align="left"><strong>并发能力</strong></td>
+<td align="left">几百到几千</td>
+<td align="left">几万到几十万</td>
+</tr>
+<tr>
+<td align="left"><strong>适用场景</strong></td>
+<td align="left">CPU 密集、I&#x2F;O 密集</td>
+<td align="left">高并发 I&#x2F;O 密集</td>
+</tr>
+</tbody></table>
+<h3 id="7-2-事件循环（Event-Loop）核心机制"><a href="#7-2-事件循环（Event-Loop）核心机制" class="headerlink" title="7.2 事件循环（Event Loop）核心机制"></a>7.2 事件循环（Event Loop）核心机制</h3><p>事件循环是异步编程的“总调度中心”，它是一个死循环，不断在任务队列里找活干。</p>
+<p><strong>协作式调度原则</strong>：</p>
+<ul>
+<li><strong>遇到 <code>await</code></strong>：协程主动挂起，让出 CPU，事件循环去执行其他任务。等 I&#x2F;O 完成后再唤醒该协程继续执行。</li>
+<li><strong>没有遇到 <code>await</code></strong>：协程独占 CPU，事件循环被阻塞，其他所有任务全部卡死等待。</li>
+<li>只要写了 <code>await</code>，无论耗时长短，都会挂起（哪怕只是挂起一瞬间）。</li>
+</ul>
+<p><strong>FastAPI 中事件循环的双重角色</strong>：</p>
+<table>
+<thead>
+<tr>
+<th align="left">身份</th>
+<th align="left">处理对象</th>
+<th align="left">具体行为</th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="left"><strong>执行者</strong></td>
+<td align="left"><code>async def</code> 路由</td>
+<td align="left">自己亲自在单线程里跑。遇到 <code>await</code> 就挂起，切换下一个协程。</td>
+</tr>
+<tr>
+<td align="left"><strong>调度者</strong></td>
+<td align="left">普通 <code>def</code> 路由</td>
+<td align="left">自己不跑，直接丢给外部<strong>线程池（Threadpool）</strong>，并继续在大厅接客。</td>
+</tr>
+</tbody></table>
+<h3 id="7-3-同步阻塞-vs-异步非阻塞"><a href="#7-3-同步阻塞-vs-异步非阻塞" class="headerlink" title="7.3 同步阻塞 vs 异步非阻塞"></a>7.3 同步阻塞 vs 异步非阻塞</h3><p><strong>同步阻塞代码</strong>：按顺序执行，遇到耗时操作就死等，卡住当前线程。</p>
+<ul>
+<li>典型例子：<code>time.sleep(5)</code>、<code>requests.get(url)</code>、<code>pymysql</code>、<code>psycopg2</code>。</li>
+</ul>
+<p><strong>异步非阻塞代码</strong>：遇到耗时操作就挂起，让出控制权。</p>
+<ul>
+<li>典型例子：<code>await asyncio.sleep(5)</code>、<code>await httpx.AsyncClient().get(url)</code>、<code>asyncpg</code>。</li>
+</ul>
+<p><strong>FastAPI 中的致命陷阱</strong>：<br>在 <code>async def</code> 路由中绝对不能写同步阻塞代码。如果写了 <code>time.sleep(10)</code>，这 10 秒内整个事件循环会被卡死，其他所有请求都要排队等待，服务看起来就像死机了一样。</p>
+<h3 id="7-4-FastAPI-并发模型实战"><a href="#7-4-FastAPI-并发模型实战" class="headerlink" title="7.4 FastAPI 并发模型实战"></a>7.4 FastAPI 并发模型实战</h3><p><strong>写法一：<code>async def</code>（推荐，高性能）</strong><br>路由直接跑在事件循环里。只要库是异步的（<code>httpx</code>、<code>asyncpg</code>），遇到 <code>await</code> 就会挂起让出 CPU，并发能力极强。</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@app.get(<span class="params"><span class="string">&quot;/async&quot;</span></span>)</span></span><br><span class="line"><span class="keyword">async</span> <span class="keyword">def</span> <span class="title function_">async_endpoint</span>():</span><br><span class="line">    <span class="keyword">async</span> <span class="keyword">with</span> httpx.AsyncClient() <span class="keyword">as</span> client:</span><br><span class="line">        resp = <span class="keyword">await</span> client.get(<span class="string">&quot;https://api.com&quot;</span>)  <span class="comment"># 挂起，让出控制权</span></span><br><span class="line">    <span class="keyword">return</span> resp.json()</span><br></pre></td></tr></table></figure>
+
+<p><strong>写法二：普通 <code>def</code>（兼容同步库）</strong><br>FastAPI 识别到是同步路由，会自动把它丢进外部线程池（默认约 40 个线程），不会卡死事件循环。</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@app.get(<span class="params"><span class="string">&quot;/sync&quot;</span></span>)</span></span><br><span class="line"><span class="keyword">def</span> <span class="title function_">sync_endpoint</span>():</span><br><span class="line">    time.sleep(<span class="number">3</span>)  <span class="comment"># 阻塞的是线程池里的线程，不会卡死事件循环</span></span><br><span class="line">    <span class="keyword">return</span> &#123;<span class="string">&quot;message&quot;</span>: <span class="string">&quot;done&quot;</span>&#125;</span><br></pre></td></tr></table></figure>
+
+<p><strong>写法三：在 <code>async def</code> 中安全地调用同步阻塞代码</strong><br>如果必须在异步路由中使用同步库，必须用 <code>asyncio.to_thread</code> 将其丢到外部线程池，避免卡死事件循环。</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> asyncio</span><br><span class="line"></span><br><span class="line"><span class="meta">@app.get(<span class="params"><span class="string">&quot;/safe&quot;</span></span>)</span></span><br><span class="line"><span class="keyword">async</span> <span class="keyword">def</span> <span class="title function_">safe_endpoint</span>():</span><br><span class="line">    <span class="comment"># 👇 将同步阻塞代码丢到外部线程池</span></span><br><span class="line">    result = <span class="keyword">await</span> asyncio.to_thread(time.sleep, <span class="number">10</span>)</span><br><span class="line">    <span class="keyword">return</span> &#123;<span class="string">&quot;message&quot;</span>: <span class="string">&quot;done&quot;</span>&#125;</span><br></pre></td></tr></table></figure>
+
+<h3 id="7-5-Python-多线程与-GIL（全局解释器锁）"><a href="#7-5-Python-多线程与-GIL（全局解释器锁）" class="headerlink" title="7.5 Python 多线程与 GIL（全局解释器锁）"></a>7.5 Python 多线程与 GIL（全局解释器锁）</h3><p>Python 有 <code>threading</code> 模块，但由于 **GIL（全局解释器锁）**的存在，在同一个 Python 进程内，同一时刻只允许一个线程执行 Python 字节码。</p>
+<ul>
+<li><strong>CPU 密集型任务</strong>：多线程不仅不能加速，反而会因为线程切换和抢锁变慢。</li>
+<li><strong>I&#x2F;O 密集型任务</strong>：当线程遇到 I&#x2F;O 操作时会主动释放 GIL，此时其他线程可以拿到 GIL 执行，所以多线程在 I&#x2F;O 场景下依然有效。</li>
+<li><strong>绕过 GIL</strong>：如果需要利用多核做 CPU 密集型计算，通常使用<strong>多进程（<code>multiprocessing</code>）</strong>，每个进程有独立的解释器和 GIL。</li>
+</ul>
+<p><strong>学习建议</strong>：当前阶段无需深学 <code>threading</code>。FastAPI 的 <code>async/await</code> 已覆盖绝大多数并发需求；同步 <code>def</code> 路由 FastAPI 会自动走线程池。等遇到 CPU 密集任务或维护老项目时，再回头补充多线程&#x2F;多进程知识。</p>
+<h3 id="7-6-FastAPI-并发模型总结对比"><a href="#7-6-FastAPI-并发模型总结对比" class="headerlink" title="7.6 FastAPI 并发模型总结对比"></a>7.6 FastAPI 并发模型总结对比</h3><table>
+<thead>
+<tr>
+<th align="left">场景</th>
+<th align="left">Java (Spring MVC&#x2F;Tomcat)</th>
+<th align="left">FastAPI (<code>async def</code>)</th>
+<th align="left">FastAPI (<code>def</code>)</th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="left"><strong>并发单位</strong></td>
+<td align="left">线程（Thread）</td>
+<td align="left">协程（Coroutine）</td>
+<td align="left">线程（Threadpool）</td>
+</tr>
+<tr>
+<td align="left"><strong>底层机制</strong></td>
+<td align="left">线程池，每请求一线程</td>
+<td align="left">单线程 + 事件循环</td>
+<td align="left">线程池，默认约 40 线程</td>
+</tr>
+<tr>
+<td align="left"><strong>同时处理 100 个请求</strong></td>
+<td align="left">创建 100 个线程</td>
+<td align="left">1 个线程内疯狂切换协程</td>
+<td align="left">40 个线程干活，60 个排队</td>
+</tr>
+<tr>
+<td align="left"><strong>并发上限</strong></td>
+<td align="left">约 200（线程池上限）</td>
+<td align="left">几万到几十万</td>
+<td align="left">默认 40（可调）</td>
+</tr>
+<tr>
+<td align="left"><strong>适合场景</strong></td>
+<td align="left">传统阻塞 I&#x2F;O</td>
+<td align="left">高并发异步 I&#x2F;O</td>
+<td align="left">兼容同步阻塞库</td>
+</tr>
+</tbody></table>
+<p><strong>实战建议</strong>：</p>
+<ol>
+<li>首选 <code>async def</code>，搭配异步库（<code>httpx</code>、<code>asyncpg</code>），发挥高并发优势。</li>
+<li>遇到同步库（<code>requests</code>、<code>pymysql</code>），老老实实写 <code>def</code> 路由，交给 FastAPI 丢进线程池。</li>
+<li>千万不要在 <code>async def</code> 里直接写同步阻塞代码，否则整个服务会被卡死。</li>
+</ol>
+<hr>
+<h2 id="今日总结"><a href="#今日总结" class="headerlink" title="今日总结"></a>今日总结</h2><table>
+<thead>
+<tr>
+<th align="left">模块</th>
+<th align="left">核心要点</th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="left"><strong>Python OOP 基础</strong></td>
+<td align="left"><code>pass</code> 仅占位；<code>self</code> 显式代表实例；局部变量无前缀，实例变量带 <code>self.</code>；类变量写在方法外。</td>
+</tr>
+<tr>
+<td align="left"><strong>动态特性</strong></td>
+<td align="left">允许动态添加属性（慎用），可用 <code>__slots__</code> 限制；类型注解非强制，运行时忽略。</td>
+</tr>
+<tr>
+<td align="left"><strong>抽象类</strong></td>
+<td align="left">需同时继承 <code>ABC</code> 并包含 <code>@abstractmethod</code>；实例化时报错，而非编译期。</td>
+</tr>
+<tr>
+<td align="left"><strong>异常处理</strong></td>
+<td align="left"><code>raise</code> 主动抛异常；<code>from e</code> 建立异常链保留根因；<code>finally</code> 用于资源清理；FastAPI 中优先依赖注入而非手动 <code>finally</code>。</td>
+</tr>
+<tr>
+<td align="left"><strong>FastAPI 参数</strong></td>
+<td align="left">名字和类型自动推断路径、查询参数；继承 <code>BaseModel</code> 自动识别请求体并校验。</td>
+</tr>
+<tr>
+<td align="left"><strong>FastAPI 响应</strong></td>
+<td align="left">直接 <code>return</code> 自动转 JSON；<code>response_model</code> 过滤字段；<code>JSONResponse</code> 自定义状态码。</td>
+</tr>
+<tr>
+<td align="left"><strong>异常处理器</strong></td>
+<td align="left"><code>HTTPException</code> 不会被 <code>Exception</code> 兜底捕获；覆盖处理器需要显式注册；处理优先级从具体到通用。</td>
+</tr>
+<tr>
+<td align="left"><strong>异步编程</strong></td>
+<td align="left">单线程 + 事件循环（协作式调度）；遇到 <code>await</code> 才挂起，否则阻塞；<code>async def</code> 中绝不能写同步阻塞代码。</td>
+</tr>
+<tr>
+<td align="left"><strong>并发模型</strong></td>
+<td align="left">事件循环是执行者（执行 <code>async def</code>）兼调度者（将 <code>def</code> 丢给线程池）；Python 多线程受 GIL 限制，只适合 I&#x2F;O 密集场景。</td>
+</tr>
+<tr>
+<td align="left"><strong>Java 对比</strong></td>
+<td align="left">Java 编译期强检查、强类型、多线程真并行；Python 运行期动态检查、鸭子类型、单线程协程高并发。Java 习惯统一 Result，FastAPI 推荐原生 HTTP 语义。</td>
+</tr>
+</tbody></table>
+
+      </div>
+
+    
+    
+    
+
+      <footer class="post-footer">
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/2026/10/04/python/03%20%E6%95%B0%E6%8D%AE%E5%AE%B9%E5%99%A8%EF%BC%9A%E5%88%97%E8%A1%A8%E3%80%81%E5%AD%97%E7%AC%A6%E4%B8%B2%E3%80%81%E5%85%83%E7%BB%84%E3%80%81%E9%9B%86%E5%90%88%E4%B8%8E%E5%AD%97%E5%85%B8/" rel="prev" title="03 数据容器：列表、字符串、元组、集合与字典">
+      <i class="fa fa-chevron-left"></i> 03 数据容器：列表、字符串、元组、集合与字典
+    </a></div>
+      <div class="post-nav-item">
+    <a href="/2026/10/13/RAG%E4%B8%8EAgent/01%20%E5%A4%A7%E6%A8%A1%E5%9E%8B%E6%8E%A5%E5%85%A5%E4%B8%8EOpenAI%E5%BA%93%E8%B0%83%E7%94%A8%EF%BC%9AAPIKEY%E4%BF%9D%E6%8A%A4%E3%80%81%E6%B5%81%E5%BC%8F%E8%BE%93%E5%87%BA%E4%B8%8E%E5%A4%9A%E8%BD%AE%E5%AF%B9%E8%AF%9D/" rel="next" title="01 大模型接入与OpenAI库调用：APIKEY保护、流式输出与多轮对话">
+      01 大模型接入与OpenAI库调用：APIKEY保护、流式输出与多轮对话 <i class="fa fa-chevron-right"></i>
+    </a></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+
+
+          </div>
+          
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#Python-OOP-%E4%B8%8E-FastAPI-%E6%A0%B8%E5%BF%83%E6%9C%BA%E5%88%B6"><span class="nav-number">1.</span> <span class="nav-text">Python OOP 与 FastAPI 核心机制</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%80%E3%80%81-Python-%E9%9D%A2%E5%90%91%E5%AF%B9%E8%B1%A1%E5%9F%BA%E7%A1%80"><span class="nav-number">1.1.</span> <span class="nav-text">一、 Python 面向对象基础</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#1-1-%E7%B1%BB%E7%9A%84%E5%AE%9A%E4%B9%89%E4%B8%8E-pass-%E5%8D%A0%E4%BD%8D"><span class="nav-number">1.1.1.</span> <span class="nav-text">1.1 类的定义与 pass 占位</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#1-2-self-%E4%B8%8E%E5%AE%9E%E4%BE%8B%E5%8F%98%E9%87%8F%E5%88%9D%E5%A7%8B%E5%8C%96"><span class="nav-number">1.1.2.</span> <span class="nav-text">1.2 self 与实例变量初始化</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#1-3-%E5%8F%98%E9%87%8F%E7%9A%84%E4%BD%9C%E7%94%A8%E5%9F%9F%EF%BC%9A%E5%B1%80%E9%83%A8%E5%8F%98%E9%87%8F%E3%80%81%E5%AE%9E%E4%BE%8B%E5%8F%98%E9%87%8F%E4%B8%8E%E7%B1%BB%E5%8F%98%E9%87%8F"><span class="nav-number">1.1.3.</span> <span class="nav-text">1.3 变量的作用域：局部变量、实例变量与类变量</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#1-4-%E5%8A%A8%E6%80%81%E6%B7%BB%E5%8A%A0%E5%B1%9E%E6%80%A7%E4%B8%8E-slots"><span class="nav-number">1.1.4.</span> <span class="nav-text">1.4 动态添加属性与 __slots__</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BA%8C%E3%80%81-Python-%E4%B8%89%E5%A4%A7%E7%89%B9%E6%80%A7%E4%B8%8E%E6%8A%BD%E8%B1%A1%E7%B1%BB"><span class="nav-number">1.2.</span> <span class="nav-text">二、 Python 三大特性与抽象类</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#2-1-%E5%B0%81%E8%A3%85%EF%BC%88Encapsulation%EF%BC%89"><span class="nav-number">1.2.1.</span> <span class="nav-text">2.1 封装（Encapsulation）</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2-2-%E7%BB%A7%E6%89%BF%EF%BC%88Inheritance%EF%BC%89"><span class="nav-number">1.2.2.</span> <span class="nav-text">2.2 继承（Inheritance）</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2-3-%E5%A4%9A%E6%80%81%EF%BC%88Polymorphism%EF%BC%89%E4%B8%8E%E9%B8%AD%E5%AD%90%E7%B1%BB%E5%9E%8B"><span class="nav-number">1.2.3.</span> <span class="nav-text">2.3 多态（Polymorphism）与鸭子类型</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2-4-%E6%8A%BD%E8%B1%A1%E7%B1%BB%E4%B8%8E%E6%8A%BD%E8%B1%A1%E6%96%B9%E6%B3%95"><span class="nav-number">1.2.4.</span> <span class="nav-text">2.4 抽象类与抽象方法</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%89%E3%80%81-Python-%E5%BC%82%E5%B8%B8%E5%A4%84%E7%90%86%E5%9F%BA%E7%A1%80"><span class="nav-number">1.3.</span> <span class="nav-text">三、 Python 异常处理基础</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#3-1-%E4%B8%BB%E5%8A%A8%E6%8A%9B%E5%87%BA%E5%BC%82%E5%B8%B8%EF%BC%88raise%EF%BC%89"><span class="nav-number">1.3.1.</span> <span class="nav-text">3.1 主动抛出异常（raise）</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#3-2-%E8%87%AA%E5%AE%9A%E4%B9%89%E5%BC%82%E5%B8%B8"><span class="nav-number">1.3.2.</span> <span class="nav-text">3.2 自定义异常</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#3-3-%E5%BC%82%E5%B8%B8%E9%93%BE%EF%BC%88raise-from-%EF%BC%89"><span class="nav-number">1.3.3.</span> <span class="nav-text">3.3 异常链（raise ... from ...）</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#3-4-%E8%B5%84%E6%BA%90%E6%B8%85%E7%90%86%E4%B8%8E-finally"><span class="nav-number">1.3.4.</span> <span class="nav-text">3.4 资源清理与 finally</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%9B%9B%E3%80%81-FastAPI-%E5%9F%BA%E7%A1%80%EF%BC%9A%E5%8F%82%E6%95%B0%E6%8E%A5%E6%94%B6"><span class="nav-number">1.4.</span> <span class="nav-text">四、 FastAPI 基础：参数接收</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#4-1-%E8%B7%AF%E7%94%B1%E6%98%A0%E5%B0%84"><span class="nav-number">1.4.1.</span> <span class="nav-text">4.1 路由映射</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#4-2-%E4%B8%89%E7%A7%8D%E5%8F%82%E6%95%B0%E7%9A%84%E8%87%AA%E5%8A%A8%E6%8E%A8%E6%96%AD"><span class="nav-number">1.4.2.</span> <span class="nav-text">4.2 三种参数的自动推断</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#4-3-Pydantic-%E6%A8%A1%E5%9E%8B%EF%BC%88BaseModel%EF%BC%89"><span class="nav-number">1.4.3.</span> <span class="nav-text">4.3 Pydantic 模型（BaseModel）</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BA%94%E3%80%81-FastAPI-%E5%9F%BA%E7%A1%80%EF%BC%9A%E8%BF%94%E5%9B%9E%E5%80%BC%E4%B8%8E%E5%93%8D%E5%BA%94"><span class="nav-number">1.5.</span> <span class="nav-text">五、 FastAPI 基础：返回值与响应</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#5-1-%E8%87%AA%E5%8A%A8%E8%BD%AC-JSON"><span class="nav-number">1.5.1.</span> <span class="nav-text">5.1 自动转 JSON</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#5-2-%E4%BD%BF%E7%94%A8-response-model-%E8%BF%87%E6%BB%A4%E5%AD%97%E6%AE%B5"><span class="nav-number">1.5.2.</span> <span class="nav-text">5.2 使用 response_model 过滤字段</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#5-3-%E8%87%AA%E5%AE%9A%E4%B9%89%E5%93%8D%E5%BA%94%EF%BC%88JSONResponse%EF%BC%89"><span class="nav-number">1.5.3.</span> <span class="nav-text">5.3 自定义响应（JSONResponse）</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%85%AD%E3%80%81-FastAPI-%E5%BC%82%E5%B8%B8%E5%A4%84%E7%90%86%E4%B8%8E%E5%85%A8%E5%B1%80%E9%85%8D%E7%BD%AE"><span class="nav-number">1.6.</span> <span class="nav-text">六、 FastAPI 异常处理与全局配置</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#6-1-%E6%8A%9B%E5%87%BA-HTTPException"><span class="nav-number">1.6.1.</span> <span class="nav-text">6.1 抛出 HTTPException</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#6-2-%E5%85%A8%E5%B1%80%E5%85%9C%E5%BA%95%E5%BC%82%E5%B8%B8%E5%A4%84%E7%90%86%E5%99%A8"><span class="nav-number">1.6.2.</span> <span class="nav-text">6.2 全局兜底异常处理器</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#6-3-%E8%A6%86%E7%9B%96-HTTPException-%E5%A4%84%E7%90%86%E5%99%A8%EF%BC%88%E5%85%B3%E9%94%AE%E8%B8%A9%E5%9D%91%EF%BC%89"><span class="nav-number">1.6.3.</span> <span class="nav-text">6.3 覆盖 HTTPException 处理器（关键踩坑）</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%83%E3%80%81-Python-%E5%BC%82%E6%AD%A5%E7%BC%96%E7%A8%8B%E4%B8%8E-FastAPI-%E5%B9%B6%E5%8F%91%E6%A8%A1%E5%9E%8B"><span class="nav-number">1.7.</span> <span class="nav-text">七、 Python 异步编程与 FastAPI 并发模型</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#7-1-%E5%BC%82%E6%AD%A5%E7%BC%96%E7%A8%8B%E7%9A%84%E6%9C%AC%E8%B4%A8%EF%BC%88%E4%B8%8E-Java-%E5%A4%9A%E7%BA%BF%E7%A8%8B%E7%9A%84%E5%8C%BA%E5%88%AB%EF%BC%89"><span class="nav-number">1.7.1.</span> <span class="nav-text">7.1 异步编程的本质（与 Java 多线程的区别）</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#7-2-%E4%BA%8B%E4%BB%B6%E5%BE%AA%E7%8E%AF%EF%BC%88Event-Loop%EF%BC%89%E6%A0%B8%E5%BF%83%E6%9C%BA%E5%88%B6"><span class="nav-number">1.7.2.</span> <span class="nav-text">7.2 事件循环（Event Loop）核心机制</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#7-3-%E5%90%8C%E6%AD%A5%E9%98%BB%E5%A1%9E-vs-%E5%BC%82%E6%AD%A5%E9%9D%9E%E9%98%BB%E5%A1%9E"><span class="nav-number">1.7.3.</span> <span class="nav-text">7.3 同步阻塞 vs 异步非阻塞</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#7-4-FastAPI-%E5%B9%B6%E5%8F%91%E6%A8%A1%E5%9E%8B%E5%AE%9E%E6%88%98"><span class="nav-number">1.7.4.</span> <span class="nav-text">7.4 FastAPI 并发模型实战</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#7-5-Python-%E5%A4%9A%E7%BA%BF%E7%A8%8B%E4%B8%8E-GIL%EF%BC%88%E5%85%A8%E5%B1%80%E8%A7%A3%E9%87%8A%E5%99%A8%E9%94%81%EF%BC%89"><span class="nav-number">1.7.5.</span> <span class="nav-text">7.5 Python 多线程与 GIL（全局解释器锁）</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#7-6-FastAPI-%E5%B9%B6%E5%8F%91%E6%A8%A1%E5%9E%8B%E6%80%BB%E7%BB%93%E5%AF%B9%E6%AF%94"><span class="nav-number">1.7.6.</span> <span class="nav-text">7.6 FastAPI 并发模型总结对比</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BB%8A%E6%97%A5%E6%80%BB%E7%BB%93"><span class="nav-number">1.8.</span> <span class="nav-text">今日总结</span></a></li></ol></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="ZHX"
+      src="/images/avatar.jpeg">
+  <p class="site-author-name" itemprop="name">ZHX</p>
+  <div class="site-description" itemprop="description">记录编程学习、项目实战和踩坑笔记</div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">68</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+            <a href="/categories/">
+          
+        <span class="site-state-item-count">13</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+  </nav>
+</div>
+
+
+
+      </div>
+        <div class="back-to-top motion-element">
+          <i class="fa fa-arrow-up"></i>
+          <span>0%</span>
+        </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2026</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">ZHX</span>
+</div>
+  <div class="powered-by">由 <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Gemini</a> 强力驱动
+  </div>
+
+        
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/pisces.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+
+</body>
+</html>

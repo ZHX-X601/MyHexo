@@ -1,0 +1,713 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 8.1.2">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/favicon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon.png">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/all.min.css">
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"www.blog-x.cc.cd","root":"/","scheme":"Gemini","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"always","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":false,"show_result":false,"style":null},"back2top":{"enable":true,"sidebar":true,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":false,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}}};
+  </script>
+
+  <meta name="description" content="01 大模型接入与OpenAI库调用：APIKEY保护、流式输出与多轮对话一、大模型接入概述1.1 为什么要用 OpenAI 库接入大模型部署在云端或本地的服务器上，程序要调用它，本质上是发一个 HTTP 请求过去。如果手写 HTTP 请求，需要自己拼装 JSON 报文、处理鉴权头、再解析流式响应，成本很高。 OpenAI 官方提供的 Python SDK 把这一层全部封装好了，对外只暴露一个 O">
+<meta property="og:type" content="article">
+<meta property="og:title" content="01 大模型接入与OpenAI库调用：APIKEY保护、流式输出与多轮对话">
+<meta property="og:url" content="https://www.blog-x.cc.cd/2026/10/13/RAG%E4%B8%8EAgent/01%20%E5%A4%A7%E6%A8%A1%E5%9E%8B%E6%8E%A5%E5%85%A5%E4%B8%8EOpenAI%E5%BA%93%E8%B0%83%E7%94%A8%EF%BC%9AAPIKEY%E4%BF%9D%E6%8A%A4%E3%80%81%E6%B5%81%E5%BC%8F%E8%BE%93%E5%87%BA%E4%B8%8E%E5%A4%9A%E8%BD%AE%E5%AF%B9%E8%AF%9D/index.html">
+<meta property="og:site_name" content="我的学习日记">
+<meta property="og:description" content="01 大模型接入与OpenAI库调用：APIKEY保护、流式输出与多轮对话一、大模型接入概述1.1 为什么要用 OpenAI 库接入大模型部署在云端或本地的服务器上，程序要调用它，本质上是发一个 HTTP 请求过去。如果手写 HTTP 请求，需要自己拼装 JSON 报文、处理鉴权头、再解析流式响应，成本很高。 OpenAI 官方提供的 Python SDK 把这一层全部封装好了，对外只暴露一个 O">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2026-10-13T15:12:40.000Z">
+<meta property="article:modified_time" content="2026-10-13T15:25:07.613Z">
+<meta property="article:author" content="ZHX">
+<meta name="twitter:card" content="summary">
+
+<link rel="canonical" href="https://www.blog-x.cc.cd/2026/10/13/RAG%E4%B8%8EAgent/01%20%E5%A4%A7%E6%A8%A1%E5%9E%8B%E6%8E%A5%E5%85%A5%E4%B8%8EOpenAI%E5%BA%93%E8%B0%83%E7%94%A8%EF%BC%9AAPIKEY%E4%BF%9D%E6%8A%A4%E3%80%81%E6%B5%81%E5%BC%8F%E8%BE%93%E5%87%BA%E4%B8%8E%E5%A4%9A%E8%BD%AE%E5%AF%B9%E8%AF%9D/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'zh-CN'
+  };
+</script>
+
+  <title>01 大模型接入与OpenAI库调用：APIKEY保护、流式输出与多轮对话 | 我的学习日记</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">我的学习日记</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="main-menu menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档<span class="badge">68</span></a>
+
+  </li>
+        <li class="menu-item menu-item-categories">
+
+    <a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分类<span class="badge">13</span></a>
+
+  </li>
+        <li class="menu-item menu-item-about">
+
+    <a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>关于</a>
+
+  </li>
+        <li class="menu-item menu-item-tags">
+
+    <a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签<span class="badge">0</span></a>
+
+  </li>
+  </ul>
+</nav>
+
+
+
+
+</div>
+    </header>
+
+    
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://www.blog-x.cc.cd/2026/10/13/RAG%E4%B8%8EAgent/01%20%E5%A4%A7%E6%A8%A1%E5%9E%8B%E6%8E%A5%E5%85%A5%E4%B8%8EOpenAI%E5%BA%93%E8%B0%83%E7%94%A8%EF%BC%9AAPIKEY%E4%BF%9D%E6%8A%A4%E3%80%81%E6%B5%81%E5%BC%8F%E8%BE%93%E5%87%BA%E4%B8%8E%E5%A4%9A%E8%BD%AE%E5%AF%B9%E8%AF%9D/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.jpeg">
+      <meta itemprop="name" content="ZHX">
+      <meta itemprop="description" content="记录编程学习、项目实战和踩坑笔记">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="我的学习日记">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          01 大模型接入与OpenAI库调用：APIKEY保护、流式输出与多轮对话
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+              
+
+              <time title="创建时间：2026-10-13 23:12:40 / 修改时间：23:25:07" itemprop="dateCreated datePublished" datetime="2026-10-13T23:12:40+08:00">2026-10-13</time>
+            </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E7%AC%94%E8%AE%B0/" itemprop="url" rel="index"><span itemprop="name">笔记</span></a>
+                </span>
+                  ，
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E7%AC%94%E8%AE%B0/RAG/" itemprop="url" rel="index"><span itemprop="name">RAG</span></a>
+                </span>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+      <div class="post-body" itemprop="articleBody">
+
+        
+          <h1 id="01-大模型接入与OpenAI库调用：APIKEY保护、流式输出与多轮对话"><a href="#01-大模型接入与OpenAI库调用：APIKEY保护、流式输出与多轮对话" class="headerlink" title="01 大模型接入与OpenAI库调用：APIKEY保护、流式输出与多轮对话"></a>01 大模型接入与OpenAI库调用：APIKEY保护、流式输出与多轮对话</h1><h2 id="一、大模型接入概述"><a href="#一、大模型接入概述" class="headerlink" title="一、大模型接入概述"></a>一、大模型接入概述</h2><h3 id="1-1-为什么要用-OpenAI-库接入"><a href="#1-1-为什么要用-OpenAI-库接入" class="headerlink" title="1.1 为什么要用 OpenAI 库接入"></a>1.1 为什么要用 OpenAI 库接入</h3><p>大模型部署在云端或本地的服务器上，程序要调用它，本质上是发一个 HTTP 请求过去。如果手写 HTTP 请求，需要自己拼装 JSON 报文、处理鉴权头、再解析流式响应，成本很高。</p>
+<p>OpenAI 官方提供的 Python SDK 把这一层全部封装好了，对外只暴露一个 <code>OpenAI</code> 类。关键在于，<strong>这套 SDK 并不绑定 OpenAI 自家的模型</strong>——只要某个服务实现了”兼容 OpenAI 的接口”，把 <code>base_url</code> 指过去就能用同一份代码调用。阿里云百炼的通义千问、本地部署的 Ollama 都提供了这样的兼容接口，所以云端和本地可以共用一套写法。</p>
+<p>后续学习 LangChain 时，它同样是在这一层调用能力之上再封装，所以这里的调用形态是后面所有内容的基础。</p>
+<h3 id="1-2-云端与本地两种部署方式"><a href="#1-2-云端与本地两种部署方式" class="headerlink" title="1.2 云端与本地两种部署方式"></a>1.2 云端与本地两种部署方式</h3><table>
+<thead>
+<tr>
+<th>方式</th>
+<th>说明</th>
+<th>特点</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>云端（阿里云百炼）</td>
+<td>模型由厂商部署，通过网络调用</td>
+<td>模型能力强，需要 APIKEY，按量计费</td>
+</tr>
+<tr>
+<td>本地（Ollama）</td>
+<td>模型下载到本机，由 Ollama 提供兼容接口</td>
+<td>免费、数据不出本机，模型规模小、能力有限</td>
+</tr>
+</tbody></table>
+<p>Ollama 是本地大模型的运行框架，启动后会监听 <code>11434</code> 端口，并额外暴露一个 <code>/v1</code> 路径用于兼容 OpenAI SDK。课程资料中打包了预下载的 <code>models</code> 文件夹，整个放进 <code>C:\Users\&lt;用户名&gt;\.ollama</code> 覆盖，就能免去下载过程直接使用演示模型。</p>
+<h3 id="1-3-调用流程"><a href="#1-3-调用流程" class="headerlink" title="1.3 调用流程"></a>1.3 调用流程</h3><p>无论访问云端还是本地，调用都是三步，差别只在参数：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">① 创建客户端 OpenAI(base_url=...)      # 决定请求发给谁</span><br><span class="line">        ↓</span><br><span class="line">② 调用 client.chat.completions.create(  # 决定用哪个模型、聊什么</span><br><span class="line">       model=..., messages=[...], stream=...)</span><br><span class="line">        ↓</span><br><span class="line">③ 消费返回结果                         # 非流式取 message.content</span><br><span class="line">                                       # 流式迭代 chunk.choices[0].delta.content</span><br></pre></td></tr></table></figure>
+
+<hr>
+<h2 id="二、OpenAI-库的基础使用"><a href="#二、OpenAI-库的基础使用" class="headerlink" title="二、OpenAI 库的基础使用"></a>二、OpenAI 库的基础使用</h2><h3 id="2-1-客户端对象与-base-url"><a href="#2-1-客户端对象与-base-url" class="headerlink" title="2.1 客户端对象与 base_url"></a>2.1 客户端对象与 base_url</h3><p><code>OpenAI</code> 是 SDK 的入口类，构造时主要给两个参数：</p>
+<table>
+<thead>
+<tr>
+<th>参数</th>
+<th>作用</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>base_url</code></td>
+<td>请求发往哪个服务</td>
+<td>默认是 OpenAI 官方地址，接第三方必须修改</td>
+</tr>
+<tr>
+<td><code>api_key</code></td>
+<td>身份凭证</td>
+<td>云端服务需要；本地 Ollama 不校验，可以不传</td>
+</tr>
+</tbody></table>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">from</span> openai <span class="keyword">import</span> OpenAI</span><br><span class="line"></span><br><span class="line">client = OpenAI(</span><br><span class="line">    base_url=<span class="string">&quot;http://localhost:11434/v1&quot;</span></span><br><span class="line">)</span><br></pre></td></tr></table></figure>
+
+<p><strong>要点</strong>：接口形态一致，只有地址不同。更换模型不需要改动代码结构，只改这两个参数。这正是”兼容模式”的意义所在。</p>
+<h3 id="2-2-接入地址对比"><a href="#2-2-接入地址对比" class="headerlink" title="2.2 接入地址对比"></a>2.2 接入地址对比</h3><table>
+<thead>
+<tr>
+<th>场景</th>
+<th>base_url</th>
+<th>model 示例</th>
+<th>api_key</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>阿里云百炼（自定义开通的服务）</td>
+<td><code>https://ws-u7840hnq50vkil5d.cn-beijing.maas.aliyuncs.com/compatible-mode/v1</code></td>
+<td><code>qwen3.8-flash</code></td>
+<td>需要</td>
+</tr>
+<tr>
+<td>阿里云百炼（官方通义兼容地址）</td>
+<td><code>https://dashscope.aliyuncs.com/compatible-mode/v1</code></td>
+<td><code>qwen3-max</code></td>
+<td>需要</td>
+</tr>
+<tr>
+<td>本地 Ollama</td>
+<td><code>http://localhost:11434/v1</code></td>
+<td><code>redule26/huihui_ai_qwen2.5-vl-7b-abliterated</code></td>
+<td>不需要</td>
+</tr>
+</tbody></table>
+<p>两者的 <code>base_url</code> 都以 <code>/compatible-mode/v1</code> 结尾，本地则以 <code>/v1</code> 结尾。Ollama 的这个 <code>/v1</code> 后缀是它为兼容 OpenAI SDK 额外暴露的路径，写漏了会直接 404。</p>
+<h3 id="2-3-messages-消息结构"><a href="#2-3-messages-消息结构" class="headerlink" title="2.3 messages 消息结构"></a>2.3 messages 消息结构</h3><p><code>messages</code> 是一个字典列表，每个字典必须包含 <code>role</code> 和 <code>content</code> 两个键。<code>role</code> 决定这条消息由谁发出：</p>
+<table>
+<thead>
+<tr>
+<th>role</th>
+<th>含义</th>
+<th>常见用法</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>system</code></td>
+<td>系统设定，描述模型的身份和语气</td>
+<td>放在最前面，对整个会话全程生效</td>
+</tr>
+<tr>
+<td><code>user</code></td>
+<td>用户输入</td>
+<td>每轮对话追加一条</td>
+</tr>
+<tr>
+<td><code>assistant</code></td>
+<td>模型此前的回复</td>
+<td>手动构造历史时才需要</td>
+</tr>
+</tbody></table>
+<p><code>system</code> 的作用非常直接，同一句提问，只改 <code>system</code> 得到的结果完全不同：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">messages=[</span><br><span class="line">    &#123;<span class="string">&quot;role&quot;</span>:<span class="string">&quot;system&quot;</span>,<span class="string">&quot;content&quot;</span>:<span class="string">&quot;你是一个编程助手,简洁不废话&quot;</span>&#125;,</span><br><span class="line">    &#123;<span class="string">&quot;role&quot;</span>:<span class="string">&quot;user&quot;</span>,<span class="string">&quot;content&quot;</span>:<span class="string">&quot;python的for循环咋写&quot;</span>&#125;</span><br><span class="line">]</span><br></pre></td></tr></table></figure>
+
+<p>除了 <code>system</code> 和用户提问，还可以在 <code>messages</code> 中间插入一条 <code>assistant</code>，例如”好的,有啥想问的,我会简洁回答,绝不废话”。这条不是真实的历史记录，而是<strong>预置一次”模型已经这样答过”的上下文</strong>，用来强化 <code>system</code> 设定的约束。这实际上已经是提示词工程中”少样本”思路的雏形。</p>
+<h3 id="2-4-非流式返回结果"><a href="#2-4-非流式返回结果" class="headerlink" title="2.4 非流式返回结果"></a>2.4 非流式返回结果</h3><p>不加 <code>stream</code> 参数时，返回的是一个完整的响应对象，答案位于 <code>choices[0].message.content</code>：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">response = client.chat.completions.create(</span><br><span class="line">    model=<span class="string">&quot;qwen3-max&quot;</span>,</span><br><span class="line">    messages=messages</span><br><span class="line">)</span><br><span class="line"></span><br><span class="line"><span class="built_in">print</span>(response.choices[<span class="number">0</span>].message.content)</span><br></pre></td></tr></table></figure>
+
+<hr>
+<h2 id="三、APIKEY-的保护"><a href="#三、APIKEY-的保护" class="headerlink" title="三、APIKEY 的保护"></a>三、APIKEY 的保护</h2><h3 id="3-1-为什么不能硬编码"><a href="#3-1-为什么不能硬编码" class="headerlink" title="3.1 为什么不能硬编码"></a>3.1 为什么不能硬编码</h3><p>把 <code>sk-xxx</code> 直接写进代码，一旦代码提交到仓库，就等于把 key 公开了。别人拿到后可以用它调用模型，产生的费用记在账号名下。所以 APIKEY 必须与代码分离。</p>
+<h3 id="3-2-三种写法"><a href="#3-2-三种写法" class="headerlink" title="3.2 三种写法"></a>3.2 三种写法</h3><figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># ① 硬编码：能用，但绝对不能提交仓库</span></span><br><span class="line">client = OpenAI(base_url=<span class="string">&quot;...&quot;</span>, api_key=<span class="string">&quot;sk-xxx&quot;</span>)</span><br><span class="line"></span><br><span class="line"><span class="comment"># ② 环境变量：推荐做法</span></span><br><span class="line"><span class="keyword">import</span> os</span><br><span class="line">client = OpenAI(</span><br><span class="line">    api_key=os.getenv(<span class="string">&quot;DASHSCOPE_API_KEY&quot;</span>),</span><br><span class="line">    base_url=<span class="string">&quot;https://ws-u7840hnq50vkil5d.cn-beijing.maas.aliyuncs.com/compatible-mode/v1&quot;</span>,</span><br><span class="line">)</span><br><span class="line"></span><br><span class="line"><span class="comment"># ③ 本地 Ollama：不需要 key</span></span><br><span class="line">client = OpenAI(base_url=<span class="string">&quot;http://localhost:11434/v1&quot;</span>)</span><br></pre></td></tr></table></figure>
+
+<p>把三种方式并列写成注释留在客户端构造处，切换云端和本地时只改注释开关，改动最小：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">client = OpenAI(</span><br><span class="line">    <span class="comment"># 如果没有配置环境变量，请用阿里云百炼API Key替换：api_key=&quot;sk-xxx&quot;</span></span><br><span class="line">    <span class="comment"># api_key=os.getenv(&quot;DASHSCOPE_API_KEY&quot;),</span></span><br><span class="line">    <span class="comment"># base_url=&quot;https://ws-u7840hnq50vkil5d.cn-beijing.maas.aliyuncs.com/compatible-mode/v1&quot;,</span></span><br><span class="line">    base_url=<span class="string">&quot;http://localhost:11434/v1&quot;</span>,</span><br><span class="line">)</span><br></pre></td></tr></table></figure>
+
+<h3 id="3-3-环境变量配置"><a href="#3-3-环境变量配置" class="headerlink" title="3.3 环境变量配置"></a>3.3 环境变量配置</h3><p>只对当前终端会话生效：</p>
+<figure class="highlight powershell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="variable">$env:DASHSCOPE_API_KEY</span>=<span class="string">&quot;sk-xxx&quot;</span></span><br></pre></td></tr></table></figure>
+
+<p>写入用户环境变量永久生效，需要重开终端：</p>
+<figure class="highlight powershell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">[<span class="type">Environment</span>]::SetEnvironmentVariable(<span class="string">&quot;DASHSCOPE_API_KEY&quot;</span>,<span class="string">&quot;sk-xxx&quot;</span>,<span class="string">&quot;User&quot;</span>)</span><br></pre></td></tr></table></figure>
+
+<p>Python 中读取回来验证：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> os</span><br><span class="line"><span class="built_in">print</span>(os.getenv(<span class="string">&quot;DASHSCOPE_API_KEY&quot;</span>))</span><br></pre></td></tr></table></figure>
+
+<h3 id="3-4-注意事项"><a href="#3-4-注意事项" class="headerlink" title="3.4 注意事项"></a>3.4 注意事项</h3><ul>
+<li>环境变量读不到值时返回 <code>None</code>，<strong>不会报错</strong>。错误要等到客户端初始化时才抛出，报错信息不容易看懂，所以先 <code>print</code> 一次确认能取到值。</li>
+<li><code>.env</code> 文件配合 <code>python-dotenv</code> 是另一种常见做法，但必须把 <code>.env</code> 写进 <code>.gitignore</code>，否则等于没做保护。</li>
+<li>已经提交进仓库的 key，应当立刻去控制台吊销重建，仅仅”后来把文件删了”没有意义——历史提交里仍然存在。</li>
+</ul>
+<hr>
+<h2 id="四、流式输出模式"><a href="#四、流式输出模式" class="headerlink" title="四、流式输出模式"></a>四、流式输出模式</h2><h3 id="4-1-为什么需要流式输出"><a href="#4-1-为什么需要流式输出" class="headerlink" title="4.1 为什么需要流式输出"></a>4.1 为什么需要流式输出</h3><p>非流式调用要等模型把整段话全部生成完，才一次性返回结果。大模型逐字生成，一段长回答可能要十几秒，用户端表现为长时间空白然后突然刷出一整段。</p>
+<p>流式输出（<code>stream=True</code>）把生成过程拆开，<strong>生成一段就返回一段</strong>，程序边接收边打印，用户端立刻能看到文字逐个出现。模型侧的总耗时并没有减少，但体感快得多。</p>
+<h3 id="4-2-基本用法"><a href="#4-2-基本用法" class="headerlink" title="4.2 基本用法"></a>4.2 基本用法</h3><p>只需要在 <code>create()</code> 里加上 <code>stream=True</code>，然后把取值方式从”读完整消息”改成”遍历碎片”：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line">response = client.chat.completions.create(</span><br><span class="line">    model=<span class="string">&#x27;redule26/huihui_ai_qwen2.5-vl-7b-abliterated&#x27;</span>,</span><br><span class="line">    messages=[</span><br><span class="line">        &#123;<span class="string">&quot;role&quot;</span>:<span class="string">&quot;system&quot;</span>,<span class="string">&quot;content&quot;</span>:<span class="string">&quot;你是一个编程助手,简洁不废话&quot;</span>&#125;,</span><br><span class="line">        &#123;<span class="string">&quot;role&quot;</span>:<span class="string">&quot;user&quot;</span>,<span class="string">&quot;content&quot;</span>:<span class="string">&quot;python的for循环咋写&quot;</span>&#125;</span><br><span class="line">    ],</span><br><span class="line">    stream=<span class="literal">True</span></span><br><span class="line">)</span><br><span class="line"></span><br><span class="line"><span class="keyword">for</span> chunk <span class="keyword">in</span> response:</span><br><span class="line">    <span class="keyword">if</span> chunk.choices <span class="keyword">and</span> chunk.choices[<span class="number">0</span>].delta.content:</span><br><span class="line">        <span class="built_in">print</span>(chunk.choices[<span class="number">0</span>].delta.content,</span><br><span class="line">              end=<span class="string">&#x27;&#x27;</span>,    <span class="comment"># 末尾不换行，片段直接拼接</span></span><br><span class="line">              flush=<span class="literal">True</span> <span class="comment"># 立即刷新缓冲区</span></span><br><span class="line">          )</span><br></pre></td></tr></table></figure>
+
+<p>关键点：</p>
+<ul>
+<li><code>stream=True</code> 是 <code>create()</code> 的一个参数，不是单独的方法调用。</li>
+<li>打印时必须用 <code>end=&#39;&#39;</code>，否则每个片段都会自动换行，输出变成一列。</li>
+<li><code>flush=True</code> 让输出立刻刷到屏幕上。不写的话内容会先攒在缓冲区里，等攒够才一次性显示，效果等同于没开流式。</li>
+</ul>
+<h3 id="4-3-两种取值路径"><a href="#4-3-两种取值路径" class="headerlink" title="4.3 两种取值路径"></a>4.3 两种取值路径</h3><p>流式和非流式的取值路径完全不同，同一个 <code>response</code> 对象不能按两种方式消费：</p>
+<table>
+<thead>
+<tr>
+<th>模式</th>
+<th>参数</th>
+<th>取值方式</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>非流式</td>
+<td>默认</td>
+<td><code>response.choices[0].message.content</code></td>
+</tr>
+<tr>
+<td>流式</td>
+<td><code>stream=True</code></td>
+<td>遍历 <code>chunk.choices[0].delta.content</code></td>
+</tr>
+</tbody></table>
+<p>一个是 <code>message</code>（完整消息），一个是 <code>delta</code>（增量片段），写混了会报错。不用的那种写法注释掉留在原地，方便来回对照：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 处理非流式返回结果</span></span><br><span class="line"><span class="comment"># print(response.choices[0].message.content)</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="4-4-深度思考模型：reasoning-content"><a href="#4-4-深度思考模型：reasoning-content" class="headerlink" title="4.4 深度思考模型：reasoning_content"></a>4.4 深度思考模型：reasoning_content</h3><p>部分模型（<code>qwen3</code> 系列等）支持深度思考，会先输出一段思维链再给最终答案。两部分不在同一个字段里：</p>
+<ul>
+<li>思维链在 <code>delta.reasoning_content</code></li>
+<li>正式答案在 <code>delta.content</code></li>
+</ul>
+<p>在请求中通过 <code>extra_body</code> 打开这一能力：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br></pre></td><td class="code"><pre><span class="line">completion = client.chat.completions.create(</span><br><span class="line">    model=<span class="string">&quot;redule26/huihui_ai_qwen2.5-vl-7b-abliterated&quot;</span>,</span><br><span class="line">    messages=messages,</span><br><span class="line">    extra_body=&#123;<span class="string">&quot;enable_thinking&quot;</span>: <span class="literal">True</span>&#125;,</span><br><span class="line">    stream=<span class="literal">True</span></span><br><span class="line">)</span><br><span class="line"></span><br><span class="line">is_answering = <span class="literal">False</span>  <span class="comment"># 是否进入回复阶段</span></span><br><span class="line"><span class="built_in">print</span>(<span class="string">&quot;\n&quot;</span> + <span class="string">&quot;=&quot;</span> * <span class="number">20</span> + <span class="string">&quot;思考过程&quot;</span> + <span class="string">&quot;=&quot;</span> * <span class="number">20</span>)</span><br><span class="line"></span><br><span class="line"><span class="keyword">for</span> chunk <span class="keyword">in</span> completion:</span><br><span class="line">    <span class="keyword">if</span> <span class="keyword">not</span> chunk.choices:</span><br><span class="line">        <span class="keyword">continue</span></span><br><span class="line">    delta = chunk.choices[<span class="number">0</span>].delta</span><br><span class="line">    <span class="comment"># 思维链</span></span><br><span class="line">    <span class="keyword">if</span> <span class="built_in">hasattr</span>(delta, <span class="string">&quot;reasoning_content&quot;</span>) <span class="keyword">and</span> delta.reasoning_content <span class="keyword">is</span> <span class="keyword">not</span> <span class="literal">None</span>:</span><br><span class="line">        <span class="keyword">if</span> <span class="keyword">not</span> is_answering:</span><br><span class="line">            <span class="built_in">print</span>(delta.reasoning_content, end=<span class="string">&quot;&quot;</span>, flush=<span class="literal">True</span>)</span><br><span class="line">    <span class="comment"># 正文</span></span><br><span class="line">    <span class="keyword">if</span> <span class="built_in">hasattr</span>(delta, <span class="string">&quot;content&quot;</span>) <span class="keyword">and</span> delta.content:</span><br><span class="line">        <span class="keyword">if</span> <span class="keyword">not</span> is_answering:</span><br><span class="line">            <span class="built_in">print</span>(<span class="string">&quot;\n&quot;</span> + <span class="string">&quot;=&quot;</span> * <span class="number">20</span> + <span class="string">&quot;完整回复&quot;</span> + <span class="string">&quot;=&quot;</span> * <span class="number">20</span>)</span><br><span class="line">            is_answering = <span class="literal">True</span></span><br><span class="line">        <span class="built_in">print</span>(delta.content, end=<span class="string">&quot;&quot;</span>, flush=<span class="literal">True</span>)</span><br></pre></td></tr></table></figure>
+
+<p>处理流程：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">逐 chunk 遍历</span><br><span class="line">  ├─ delta.reasoning_content 非空 → 打印思考过程（不切段）</span><br><span class="line">  └─ delta.content 非空        → 先换行打分隔标题，再用 is_answering 锁定，后续只打正文</span><br></pre></td></tr></table></figure>
+
+<p><code>is_answering</code> 标志位的作用是给输出分段。思维链是分成很多个碎片流式返回的，如果不加这个标志，每个碎片都会重复打印一次”完整回复”的标题。</p>
+<h3 id="4-5-易错点"><a href="#4-5-易错点" class="headerlink" title="4.5 易错点"></a>4.5 易错点</h3><ul>
+<li><strong>必须先判断 <code>chunk.choices</code> 是否为空</strong>。流式过程中会出现 <code>choices</code> 为空的心跳包，不加 <code>if not chunk.choices: continue</code> 会抛 <code>IndexError</code>。</li>
+<li><strong>用 <code>hasattr</code> 判断字段是否存在</strong>，而不是直接访问 <code>delta.reasoning_content</code>。不支持深度思考的模型没有这个属性，直接访问会抛 <code>AttributeError</code>。</li>
+<li><strong><code>extra_body</code> 是 SDK 的逃生通道</strong>，用来传各家自定义的参数。放进这个字典意味着该参数不是 OpenAI 标准参数，换一个不支持的模型可能直接被拒。</li>
+</ul>
+<hr>
+<h2 id="五、附带历史消息实现多轮对话"><a href="#五、附带历史消息实现多轮对话" class="headerlink" title="五、附带历史消息实现多轮对话"></a>五、附带历史消息实现多轮对话</h2><h3 id="5-1-模型为什么会”失忆”"><a href="#5-1-模型为什么会”失忆”" class="headerlink" title="5.1 模型为什么会”失忆”"></a>5.1 模型为什么会”失忆”</h3><p>每次调用都是一次独立的 HTTP 请求，服务端不会为某次对话保留状态，模型本身不知道上一轮说了什么。所谓”多轮对话”，本质是<strong>每请求一次，就把之前的全部对话重新发送一遍</strong>。</p>
+<p>这也意味着对话历史需要由调用方自己维护。</p>
+<h3 id="5-2-messages-累加实现"><a href="#5-2-messages-累加实现" class="headerlink" title="5.2 messages 累加实现"></a>5.2 messages 累加实现</h3><p>把历史放进 <code>messages</code>，每轮追加而不是重建：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">from</span> openai <span class="keyword">import</span> OpenAI</span><br><span class="line"></span><br><span class="line">client = OpenAI(</span><br><span class="line">    base_url=<span class="string">&#x27;https://ws-u7840hnq50vkil5d.cn-beijing.maas.aliyuncs.com/compatible-mode/v1&#x27;</span></span><br><span class="line">)</span><br><span class="line"></span><br><span class="line"><span class="comment"># 预设的历史：system 定规则，assistant 给一个示范回答</span></span><br><span class="line">messages = [</span><br><span class="line">    &#123;<span class="string">&quot;role&quot;</span>: <span class="string">&quot;system&quot;</span>, <span class="string">&quot;content&quot;</span>: <span class="string">&quot;你是一个编程助手,简洁不废话&quot;</span>&#125;,</span><br><span class="line">    &#123;<span class="string">&quot;role&quot;</span>: <span class="string">&quot;assistant&quot;</span>, <span class="string">&quot;content&quot;</span>: <span class="string">&quot;好的,有啥想问的,我会简洁回答,绝不废话&quot;</span>&#125;,</span><br><span class="line">]</span><br><span class="line"></span><br><span class="line"><span class="keyword">while</span> <span class="literal">True</span>:</span><br><span class="line">    userin = <span class="built_in">input</span>(<span class="string">&#x27;你:&#x27;</span>)</span><br><span class="line">    messages.append(&#123;<span class="string">&quot;role&quot;</span>: <span class="string">&quot;user&quot;</span>, <span class="string">&quot;content&quot;</span>: userin&#125;)</span><br><span class="line"></span><br><span class="line">    <span class="built_in">print</span>(<span class="string">&#x27;ai:&#x27;</span>)</span><br><span class="line">    response = client.chat.completions.create(</span><br><span class="line">        model=<span class="string">&quot;qwen3.8-flash&quot;</span>,</span><br><span class="line">        messages=messages,</span><br><span class="line">        stream=<span class="literal">True</span>,</span><br><span class="line">        extra_body=&#123;<span class="string">&quot;enable_thinking&quot;</span>: <span class="literal">True</span>&#125;,</span><br><span class="line">    )</span><br><span class="line"></span><br><span class="line">    ai = []</span><br><span class="line">    <span class="keyword">for</span> chunk <span class="keyword">in</span> response:</span><br><span class="line">	    <span class="keyword">if</span>(<span class="keyword">not</span> chunk.choices):<span class="keyword">continue</span></span><br><span class="line">        <span class="keyword">if</span> chunk.choices <span class="keyword">and</span> chunk.choices[<span class="number">0</span>].delta.content:</span><br><span class="line">            ai.append(chunk.choices[<span class="number">0</span>].delta.content)</span><br><span class="line">            <span class="built_in">print</span>(chunk.choices[<span class="number">0</span>].delta.content, end=<span class="string">&#x27;&#x27;</span>, flush=<span class="literal">True</span>)</span><br><span class="line">    <span class="built_in">print</span>()</span><br><span class="line"></span><br><span class="line">    messages.append(&#123;<span class="string">&quot;role&quot;</span>: <span class="string">&quot;assistant&quot;</span>, <span class="string">&quot;content&quot;</span>: <span class="string">&#x27;&#x27;</span>.join(ai)&#125;)</span><br><span class="line">    <span class="built_in">print</span>(<span class="string">&#x27;\n&#x27;</span> + <span class="built_in">str</span>(messages) + <span class="string">&#x27;\n&#x27;</span>)</span><br></pre></td></tr></table></figure>
+
+<p>关键点：</p>
+<ul>
+<li>用户输入通过 <code>append</code> 加入 <code>messages</code>，然后<strong>把整个列表传给模型</strong>，而不是只传这一句。</li>
+<li>模型回复结束后，必须<strong>把这一轮 AI 的完整回复再 append 回 <code>messages</code></strong>，成为下一轮的历史。这一步最容易漏。</li>
+<li>流式返回的是一堆碎片，所以要先用 <code>ai</code> 列表收集，循环结束后 <code>&#39;&#39;.join(ai)</code> 拼成完整字符串再写回。直接 append 碎片会导致历史里存的是残缺内容。</li>
+<li>最后那句 <code>print(&#39;\n&#39; + str(messages) + &#39;\n&#39;)</code> 用于调试，把每轮结束后的完整消息列表打出来，可以直观看到历史是如何堆积的。排查”模型好像忘了前面说过什么”这类问题时，先看这里。</li>
+</ul>
+<h3 id="5-3-两种构造历史的方式"><a href="#5-3-两种构造历史的方式" class="headerlink" title="5.3 两种构造历史的方式"></a>5.3 两种构造历史的方式</h3><table>
+<thead>
+<tr>
+<th>方式</th>
+<th>特点</th>
+<th>适用场景</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>一次性写死多轮</td>
+<td>历史在调用前就固定好</td>
+<td>验证模型能否利用历史推理</td>
+</tr>
+<tr>
+<td>循环中累加</td>
+<td>每轮把用户输入和模型回复追加进去</td>
+<td>可交互的连续会话</td>
+</tr>
+</tbody></table>
+<p>写死多轮的典型例子如下，用来验证模型确实能利用历史做推理（2 + 3 &#x3D; 5）：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">messages=[</span><br><span class="line">    &#123;<span class="string">&quot;role&quot;</span>: <span class="string">&quot;system&quot;</span>, <span class="string">&quot;content&quot;</span>: <span class="string">&quot;你是AI助理，回答很简洁&quot;</span>&#125;,</span><br><span class="line">    &#123;<span class="string">&quot;role&quot;</span>: <span class="string">&quot;user&quot;</span>, <span class="string">&quot;content&quot;</span>: <span class="string">&quot;小明有2条宠物狗&quot;</span>&#125;,</span><br><span class="line">    &#123;<span class="string">&quot;role&quot;</span>: <span class="string">&quot;assistant&quot;</span>, <span class="string">&quot;content&quot;</span>: <span class="string">&quot;好的&quot;</span>&#125;,</span><br><span class="line">    &#123;<span class="string">&quot;role&quot;</span>: <span class="string">&quot;user&quot;</span>, <span class="string">&quot;content&quot;</span>: <span class="string">&quot;小红有3只宠物猫&quot;</span>&#125;,</span><br><span class="line">    &#123;<span class="string">&quot;role&quot;</span>: <span class="string">&quot;assistant&quot;</span>, <span class="string">&quot;content&quot;</span>: <span class="string">&quot;好的&quot;</span>&#125;,</span><br><span class="line">    &#123;<span class="string">&quot;role&quot;</span>: <span class="string">&quot;user&quot;</span>, <span class="string">&quot;content&quot;</span>: <span class="string">&quot;总共有几个宠物？&quot;</span>&#125;</span><br><span class="line">]</span><br></pre></td></tr></table></figure>
+
+<p>两种方式本质完全一样，都是把历史完整放进 <code>messages</code> 一起发送，区别只在历史是静态写死的还是动态累积的。</p>
+<h3 id="5-4-现有实现的局限"><a href="#5-4-现有实现的局限" class="headerlink" title="5.4 现有实现的局限"></a>5.4 现有实现的局限</h3><p>对话轮数越多，<code>messages</code> 越长，每次请求携带的 token 数量和响应延迟都会随之上升，最终还会顶到模型的上下文长度上限。手动无限 <code>append</code> 无法解决这个问题。</p>
+<p>这一局限由 LangChain 的 Memory 组件处理，它提供历史的自动裁剪、摘要和持久化能力，后面会单独学习。</p>
+<hr>
+<h2 id="六、问题与解决"><a href="#六、问题与解决" class="headerlink" title="六、问题与解决"></a>六、问题与解决</h2><h3 id="问题-1：变量名拼写错误"><a href="#问题-1：变量名拼写错误" class="headerlink" title="问题 1：变量名拼写错误"></a>问题 1：变量名拼写错误</h3><ul>
+<li><strong>现象</strong>：客户端对象被写成了 <code>clinet</code>。</li>
+<li><strong>原因</strong>：手写时漏掉了字母 i。</li>
+<li><strong>解决</strong>：改成 <code>client</code>，与其余脚本保持一致。</li>
+<li><strong>提醒</strong>：对象名拼错后，后续所有调用都跟着错，且报错位置在调用处而不是定义处，排查时容易被带偏。</li>
+</ul>
+<h3 id="问题-2：and-运算符的结果被当成数据使用"><a href="#问题-2：and-运算符的结果被当成数据使用" class="headerlink" title="问题 2：and 运算符的结果被当成数据使用"></a>问题 2：<code>and</code> 运算符的结果被当成数据使用</h3><ul>
+<li><strong>现象</strong>：收集流式片段时写成了 <code>ai.append(chunk.choices and chunk.choices[0].delta.content)</code>。</li>
+<li><strong>原因</strong>：Python 的 <code>and</code> 返回的是<strong>其中一个操作数本身</strong>，而不是布尔值。当 <code>chunk.choices</code> 为空列表时，整个表达式返回 <code>[]</code>。把这个结果 append 进 <code>ai</code>，后续 <code>&#39;&#39;.join(ai)</code> 就会把非字符串内容混进去，历史直接被污染。</li>
+<li><strong>解决</strong>：判断和取值分开写。</li>
+</ul>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">if</span> chunk.choices <span class="keyword">and</span> chunk.choices[<span class="number">0</span>].delta.content:</span><br><span class="line">    ai.append(chunk.choices[<span class="number">0</span>].delta.content)</span><br><span class="line">    <span class="built_in">print</span>(chunk.choices[<span class="number">0</span>].delta.content, end=<span class="string">&#x27;&#x27;</span>, flush=<span class="literal">True</span>)</span><br></pre></td></tr></table></figure>
+
+<ul>
+<li><strong>提醒</strong>：这种写法放在 <code>if</code> 条件里没问题（空列表是 falsy），一旦把表达式的结果当值来用就会出错。凡是 <code>and</code> 的结果要用作数据，先拆开写。</li>
+</ul>
+<h3 id="问题-3：未判断空的-chunk"><a href="#问题-3：未判断空的-chunk" class="headerlink" title="问题 3：未判断空的 chunk"></a>问题 3：未判断空的 chunk</h3><ul>
+<li><strong>现象</strong>：只有一处代码写了 <code>if not chunk.choices: continue</code>，其余流式循环都没有。</li>
+<li><strong>原因</strong>：流式返回中会穿插 <code>choices</code> 为空的心跳包，用于保活，不带实际内容。</li>
+<li><strong>解决</strong>：所有遍历 chunk 的循环统一加上判空。</li>
+<li><strong>提醒</strong>：这类问题属于偶发崩溃而非必现，本地跑几次可能都正常，压力上来才暴露。防御性判断应当保持一致。</li>
+</ul>
+<h3 id="问题-4：循环没有退出条件"><a href="#问题-4：循环没有退出条件" class="headerlink" title="问题 4：循环没有退出条件"></a>问题 4：循环没有退出条件</h3><ul>
+<li><strong>现象</strong>：多轮对话用 <code>while True</code> 实现，输入 <code>exit</code> 会被当成正常提问发给模型。</li>
+<li><strong>解决</strong>：补一个出口。</li>
+</ul>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">if</span> userin.lower() <span class="keyword">in</span> (<span class="string">&#x27;exit&#x27;</span>, <span class="string">&#x27;quit&#x27;</span>, <span class="string">&#x27;退出&#x27;</span>):</span><br><span class="line">    <span class="keyword">break</span></span><br></pre></td></tr></table></figure>
+
+<ul>
+<li><strong>提醒</strong>：交互式脚本都应当留一个明确的退出方式，否则只能靠 <code>Ctrl+C</code> 强制中断。</li>
+</ul>
+<hr>
+<h2 id="七、未解决的问题"><a href="#七、未解决的问题" class="headerlink" title="七、未解决的问题"></a>七、未解决的问题</h2><ul>
+<li><strong><code>enable_thinking</code> 对本地模型是否生效</strong>：测试时用的是本地 Ollama 模型，同时传了 <code>extra_body={&quot;enable_thinking&quot;: True}</code>，但本地模型是否响应这个参数没有实际验证过。如果报参数错误，去掉 <code>extra_body</code> 即可，不影响非流式和流式本身。</li>
+<li><strong>自定义服务的模型名归属</strong>：百炼上自定义开通的服务对应的模型名（如 <code>qwen3.8-flash</code>）与官方通义地址的模型名（如 <code>qwen3-max</code>）之间的对应关系，需要结合实际开通情况确认。</li>
+</ul>
+<h2 id="今日总结"><a href="#今日总结" class="headerlink" title="今日总结"></a>今日总结</h2><table>
+<thead>
+<tr>
+<th>模块</th>
+<th>核心要点</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>接入方式</td>
+<td>用 OpenAI SDK 作为兼容层，云端百炼与本地 Ollama 共用同一套代码</td>
+</tr>
+<tr>
+<td>客户端</td>
+<td><code>OpenAI(base_url=..., api_key=...)</code>，切换服务只改这两个参数</td>
+</tr>
+<tr>
+<td>调用地址</td>
+<td>百炼用 <code>/compatible-mode/v1</code>，本地 Ollama 用 <code>localhost:11434/v1</code></td>
+</tr>
+<tr>
+<td>APIKEY</td>
+<td>禁止硬编码，用 <code>os.getenv(&quot;DASHSCOPE_API_KEY&quot;)</code> 读取</td>
+</tr>
+<tr>
+<td>消息结构</td>
+<td><code>system</code> 定人设、<code>user</code> 提问、<code>assistant</code> 存历史，顺序即生效顺序</td>
+</tr>
+<tr>
+<td>非流式</td>
+<td>取 <code>response.choices[0].message.content</code></td>
+</tr>
+<tr>
+<td>流式</td>
+<td><code>stream=True</code> + 遍历 <code>chunk.choices[0].delta.content</code>，配合 <code>end=&#39;&#39;</code> 与 <code>flush=True</code></td>
+</tr>
+<tr>
+<td>深度思考</td>
+<td><code>extra_body={&quot;enable_thinking&quot;: True}</code>；<code>delta.reasoning_content</code> 是思维链，<code>delta.content</code> 是正文</td>
+</tr>
+<tr>
+<td>多轮对话</td>
+<td>模型不保存状态，每轮把完整历史重新发送；AI 回复需收集后再 append 回 <code>messages</code></td>
+</tr>
+<tr>
+<td>防御性写法</td>
+<td>遍历 chunk 前先判 <code>chunk.choices</code> 是否为空，避免偶发 <code>IndexError</code></td>
+</tr>
+</tbody></table>
+
+      </div>
+
+    
+    
+    
+
+      <footer class="post-footer">
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/2026/10/13/python/04%20Python%20OOP%20%E4%B8%8E%20FastAPI%20%E6%A0%B8%E5%BF%83%E6%9C%BA%E5%88%B6/" rel="prev" title="04 Python OOP 与 FastAPI 核心机制学习笔记">
+      <i class="fa fa-chevron-left"></i> 04 Python OOP 与 FastAPI 核心机制学习笔记
+    </a></div>
+      <div class="post-nav-item"></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+
+
+          </div>
+          
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#01-%E5%A4%A7%E6%A8%A1%E5%9E%8B%E6%8E%A5%E5%85%A5%E4%B8%8EOpenAI%E5%BA%93%E8%B0%83%E7%94%A8%EF%BC%9AAPIKEY%E4%BF%9D%E6%8A%A4%E3%80%81%E6%B5%81%E5%BC%8F%E8%BE%93%E5%87%BA%E4%B8%8E%E5%A4%9A%E8%BD%AE%E5%AF%B9%E8%AF%9D"><span class="nav-number">1.</span> <span class="nav-text">01 大模型接入与OpenAI库调用：APIKEY保护、流式输出与多轮对话</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%80%E3%80%81%E5%A4%A7%E6%A8%A1%E5%9E%8B%E6%8E%A5%E5%85%A5%E6%A6%82%E8%BF%B0"><span class="nav-number">1.1.</span> <span class="nav-text">一、大模型接入概述</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#1-1-%E4%B8%BA%E4%BB%80%E4%B9%88%E8%A6%81%E7%94%A8-OpenAI-%E5%BA%93%E6%8E%A5%E5%85%A5"><span class="nav-number">1.1.1.</span> <span class="nav-text">1.1 为什么要用 OpenAI 库接入</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#1-2-%E4%BA%91%E7%AB%AF%E4%B8%8E%E6%9C%AC%E5%9C%B0%E4%B8%A4%E7%A7%8D%E9%83%A8%E7%BD%B2%E6%96%B9%E5%BC%8F"><span class="nav-number">1.1.2.</span> <span class="nav-text">1.2 云端与本地两种部署方式</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#1-3-%E8%B0%83%E7%94%A8%E6%B5%81%E7%A8%8B"><span class="nav-number">1.1.3.</span> <span class="nav-text">1.3 调用流程</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BA%8C%E3%80%81OpenAI-%E5%BA%93%E7%9A%84%E5%9F%BA%E7%A1%80%E4%BD%BF%E7%94%A8"><span class="nav-number">1.2.</span> <span class="nav-text">二、OpenAI 库的基础使用</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#2-1-%E5%AE%A2%E6%88%B7%E7%AB%AF%E5%AF%B9%E8%B1%A1%E4%B8%8E-base-url"><span class="nav-number">1.2.1.</span> <span class="nav-text">2.1 客户端对象与 base_url</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2-2-%E6%8E%A5%E5%85%A5%E5%9C%B0%E5%9D%80%E5%AF%B9%E6%AF%94"><span class="nav-number">1.2.2.</span> <span class="nav-text">2.2 接入地址对比</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2-3-messages-%E6%B6%88%E6%81%AF%E7%BB%93%E6%9E%84"><span class="nav-number">1.2.3.</span> <span class="nav-text">2.3 messages 消息结构</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2-4-%E9%9D%9E%E6%B5%81%E5%BC%8F%E8%BF%94%E5%9B%9E%E7%BB%93%E6%9E%9C"><span class="nav-number">1.2.4.</span> <span class="nav-text">2.4 非流式返回结果</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%89%E3%80%81APIKEY-%E7%9A%84%E4%BF%9D%E6%8A%A4"><span class="nav-number">1.3.</span> <span class="nav-text">三、APIKEY 的保护</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#3-1-%E4%B8%BA%E4%BB%80%E4%B9%88%E4%B8%8D%E8%83%BD%E7%A1%AC%E7%BC%96%E7%A0%81"><span class="nav-number">1.3.1.</span> <span class="nav-text">3.1 为什么不能硬编码</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#3-2-%E4%B8%89%E7%A7%8D%E5%86%99%E6%B3%95"><span class="nav-number">1.3.2.</span> <span class="nav-text">3.2 三种写法</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#3-3-%E7%8E%AF%E5%A2%83%E5%8F%98%E9%87%8F%E9%85%8D%E7%BD%AE"><span class="nav-number">1.3.3.</span> <span class="nav-text">3.3 环境变量配置</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#3-4-%E6%B3%A8%E6%84%8F%E4%BA%8B%E9%A1%B9"><span class="nav-number">1.3.4.</span> <span class="nav-text">3.4 注意事项</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%9B%9B%E3%80%81%E6%B5%81%E5%BC%8F%E8%BE%93%E5%87%BA%E6%A8%A1%E5%BC%8F"><span class="nav-number">1.4.</span> <span class="nav-text">四、流式输出模式</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#4-1-%E4%B8%BA%E4%BB%80%E4%B9%88%E9%9C%80%E8%A6%81%E6%B5%81%E5%BC%8F%E8%BE%93%E5%87%BA"><span class="nav-number">1.4.1.</span> <span class="nav-text">4.1 为什么需要流式输出</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#4-2-%E5%9F%BA%E6%9C%AC%E7%94%A8%E6%B3%95"><span class="nav-number">1.4.2.</span> <span class="nav-text">4.2 基本用法</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#4-3-%E4%B8%A4%E7%A7%8D%E5%8F%96%E5%80%BC%E8%B7%AF%E5%BE%84"><span class="nav-number">1.4.3.</span> <span class="nav-text">4.3 两种取值路径</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#4-4-%E6%B7%B1%E5%BA%A6%E6%80%9D%E8%80%83%E6%A8%A1%E5%9E%8B%EF%BC%9Areasoning-content"><span class="nav-number">1.4.4.</span> <span class="nav-text">4.4 深度思考模型：reasoning_content</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#4-5-%E6%98%93%E9%94%99%E7%82%B9"><span class="nav-number">1.4.5.</span> <span class="nav-text">4.5 易错点</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BA%94%E3%80%81%E9%99%84%E5%B8%A6%E5%8E%86%E5%8F%B2%E6%B6%88%E6%81%AF%E5%AE%9E%E7%8E%B0%E5%A4%9A%E8%BD%AE%E5%AF%B9%E8%AF%9D"><span class="nav-number">1.5.</span> <span class="nav-text">五、附带历史消息实现多轮对话</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#5-1-%E6%A8%A1%E5%9E%8B%E4%B8%BA%E4%BB%80%E4%B9%88%E4%BC%9A%E2%80%9D%E5%A4%B1%E5%BF%86%E2%80%9D"><span class="nav-number">1.5.1.</span> <span class="nav-text">5.1 模型为什么会”失忆”</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#5-2-messages-%E7%B4%AF%E5%8A%A0%E5%AE%9E%E7%8E%B0"><span class="nav-number">1.5.2.</span> <span class="nav-text">5.2 messages 累加实现</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#5-3-%E4%B8%A4%E7%A7%8D%E6%9E%84%E9%80%A0%E5%8E%86%E5%8F%B2%E7%9A%84%E6%96%B9%E5%BC%8F"><span class="nav-number">1.5.3.</span> <span class="nav-text">5.3 两种构造历史的方式</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#5-4-%E7%8E%B0%E6%9C%89%E5%AE%9E%E7%8E%B0%E7%9A%84%E5%B1%80%E9%99%90"><span class="nav-number">1.5.4.</span> <span class="nav-text">5.4 现有实现的局限</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%85%AD%E3%80%81%E9%97%AE%E9%A2%98%E4%B8%8E%E8%A7%A3%E5%86%B3"><span class="nav-number">1.6.</span> <span class="nav-text">六、问题与解决</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E9%97%AE%E9%A2%98-1%EF%BC%9A%E5%8F%98%E9%87%8F%E5%90%8D%E6%8B%BC%E5%86%99%E9%94%99%E8%AF%AF"><span class="nav-number">1.6.1.</span> <span class="nav-text">问题 1：变量名拼写错误</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E9%97%AE%E9%A2%98-2%EF%BC%9Aand-%E8%BF%90%E7%AE%97%E7%AC%A6%E7%9A%84%E7%BB%93%E6%9E%9C%E8%A2%AB%E5%BD%93%E6%88%90%E6%95%B0%E6%8D%AE%E4%BD%BF%E7%94%A8"><span class="nav-number">1.6.2.</span> <span class="nav-text">问题 2：and 运算符的结果被当成数据使用</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E9%97%AE%E9%A2%98-3%EF%BC%9A%E6%9C%AA%E5%88%A4%E6%96%AD%E7%A9%BA%E7%9A%84-chunk"><span class="nav-number">1.6.3.</span> <span class="nav-text">问题 3：未判断空的 chunk</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E9%97%AE%E9%A2%98-4%EF%BC%9A%E5%BE%AA%E7%8E%AF%E6%B2%A1%E6%9C%89%E9%80%80%E5%87%BA%E6%9D%A1%E4%BB%B6"><span class="nav-number">1.6.4.</span> <span class="nav-text">问题 4：循环没有退出条件</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%83%E3%80%81%E6%9C%AA%E8%A7%A3%E5%86%B3%E7%9A%84%E9%97%AE%E9%A2%98"><span class="nav-number">1.7.</span> <span class="nav-text">七、未解决的问题</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BB%8A%E6%97%A5%E6%80%BB%E7%BB%93"><span class="nav-number">1.8.</span> <span class="nav-text">今日总结</span></a></li></ol></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="ZHX"
+      src="/images/avatar.jpeg">
+  <p class="site-author-name" itemprop="name">ZHX</p>
+  <div class="site-description" itemprop="description">记录编程学习、项目实战和踩坑笔记</div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">68</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+            <a href="/categories/">
+          
+        <span class="site-state-item-count">13</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+  </nav>
+</div>
+
+
+
+      </div>
+        <div class="back-to-top motion-element">
+          <i class="fa fa-arrow-up"></i>
+          <span>0%</span>
+        </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2026</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">ZHX</span>
+</div>
+  <div class="powered-by">由 <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Gemini</a> 强力驱动
+  </div>
+
+        
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/pisces.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+
+</body>
+</html>
